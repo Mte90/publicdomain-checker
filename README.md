@@ -118,7 +118,24 @@ python3 -m pd_checker push <cartella>
 python3 -m pd_checker push <cartella> --live --filename-prefix "Merry del Val santino"
 ```
 
-Cosa serve — una delle due vie, mai la password dell'account: **OAuth 2 owner-only** (consigliata), consumer su meta Special:OAuthConsumerRegistration/propose/oauth2 e poi `export PD_WM_OAUTH_TOKEN=…`; oppure **bot password**, Special:BotPasswords con i soli permessi upload/edit e poi `export PD_WM_BOT_USER=…` e `PD_WM_BOT_PASSWORD=…`.
+Cosa serve — una delle due vie, mai la password dell'account. Nota: il token OAuth NON si richiede su Commons, l'OAuth di Wikimedia è centralizzato su meta.
+
+**Via A — OAuth 2 owner-only (consigliata, non richiede revisione):**
+
+1. Accedi a meta.wikimedia.org con lo stesso account che usi su Commons e apri `https://meta.wikimedia.org/wiki/Special:OAuthConsumerRegistration/propose/oauth2`.
+2. Spunta «This consumer is for use only by `<tuo account>`» — così il consumer è owner-only: niente revisione da parte di nessuno, niente autorizzazione, usabile solo da te.
+3. Compila il modulo: un nome a piacere per lo strumento, e tra i permessi ("grants") spunta quelli per modificare pagine e caricare file; il resto può restare vuoto. Invia.
+4. Nella pagina di conferma ti viene mostrato direttamente l'**access token** (una stringa lunga che inizia per `ey`): copiala subito, è la cosa più comoda.
+5. `export PD_WM_OAUTH_TOKEN='ey…'`
+
+**Via B — bot password (più rapida):**
+
+1. Su `https://commons.wikimedia.org/wiki/Special:BotPasswords` crea una nuova bot password: dai un suffisso al nome, per es. `pd-checker`.
+2. Spunta solo i permessi necessari: caricare file (upload) e modificare pagine (edit).
+3. Ti viene mostrata la password generata (una volta sola). Il nome utente da usare diventa `<tuo account>@pd-checker`.
+4. `export PD_WM_BOT_USER='TuoNome@pd-checker'` e `export PD_WM_BOT_PASSWORD='<la password generata>'`
+
+In entrambi i casi: `export PD_WM_CONTACT='tua@email'` — serve per lo User-Agent richiesto dalla policy Wikimedia. Se cambi la password dell'account, la bot password smette di funzionare finché non la rigeneri.
 
 Il wikitext (`{{Information}}`, licenze, categorie) è già assemblato dal pacchetto; un file già esistente su Commons non viene mai sovrascritto (l'elemento risulta fallito con il motivo); `PD_WM_CONTACT` completa lo User-Agent richiesto dall'etichetta API Wikimedia.
 

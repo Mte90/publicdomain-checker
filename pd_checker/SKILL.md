@@ -292,8 +292,8 @@ python3 -m pd_checker push <folder> --live --filename-prefix PREFIX
 **Live upload requires:**
 1. **Explicit `--filename-prefix`** — never upload files with meaningless names
 2. **Credentials via environment variables ONLY** (never argv, never files, never printed):
-   - `PD_WM_OAUTH_TOKEN` — OAuth 2 bearer token (preferred)
-   - `PD_WM_BOT_USER` + `PD_WM_BOT_PASSWORD` — bot-password login flow
+   - `PD_WM_OAUTH_TOKEN` — OAuth 2 owner-only bearer token (preferred). Registered at https://meta.wikimedia.org/wiki/Special:OAuthConsumerRegistration/propose/oauth2 (check "This consumer is for use only by <user>"; the access token is shown on the confirmation page — Wikimedia OAuth is centralised on meta, NOT Commons)
+   - `PD_WM_BOT_USER` + `PD_WM_BOT_PASSWORD` — bot-password login flow. Created at https://commons.wikimedia.org/wiki/Special:BotPasswords (choose the upload/edit grants; the login name becomes `<account>@<suffix>`)
    - `PD_WM_CONTACT` — contact info for User-Agent (required by Wikimedia API etiquette)
 
 **Upload behavior:**
