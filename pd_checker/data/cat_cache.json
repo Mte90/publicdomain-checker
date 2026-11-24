@@ -1,0 +1,15 @@
+{
+  "note": "Commons category existence cache. Offline lookup only; use --live preflight for live verification.",
+  "source": "https://commons.wikimedia.org/w/api.php",
+  "fetched": "2026-11-23",
+  "categories": {
+    "Category:Rafael Merry del Val": {
+      "status": "exists",
+      "checked": "2026-11-23"
+    },
+    "Category:Postcards of Italy": {
+      "status": "exists",
+      "checked": "2026-11-23"
+    }
+  }
+}

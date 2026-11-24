@@ -1,0 +1,125 @@
+{
+  "note": "Name → Wikidata QID lookups. This is the only source of QIDs; maintained via the update/resolve flow.",
+  "fetched": "2026-11-23",
+  "names": {
+    "Raffaele Merry del Val": {
+      "qid": "Q507540",
+      "label_it": "Raffaele Merry del Val",
+      "label_en": "Raffaele Merry del Val",
+      "result": "ok",
+      "checked": "2026-11-20"
+    },
+    "Rafael Merry del Val": {
+      "qid": "Q507540",
+      "label_it": "Rafael Merry del Val",
+      "label_en": "Rafael Merry del Val",
+      "result": "ok",
+      "checked": "2026-11-20"
+    },
+    "Merry del Val": {
+      "qid": "Q507540",
+      "label_it": "Merry del Val",
+      "label_en": "Merry del Val",
+      "result": "ok",
+      "checked": "2026-11-20"
+    },
+    "Pio X": {
+      "qid": "Q43739",
+      "label_it": "Pio X",
+      "label_en": "Pio X",
+      "result": "ok",
+      "checked": "2026-11-20"
+    },
+    "Pius X": {
+      "qid": "Q43739",
+      "label_it": "Pius X",
+      "label_en": "Pius X",
+      "result": "ok",
+      "checked": "2026-11-20"
+    },
+    "Perugia": {
+      "qid": "Q3437",
+      "label_it": "Perugia",
+      "label_en": "Perugia",
+      "result": "ok",
+      "checked": "2026-11-20"
+    },
+    "Riese Pio X": {
+      "qid": "Q46787",
+      "label_it": "Riese Pio X",
+      "label_en": "Riese Pio X",
+      "result": "ok",
+      "checked": "2026-11-20"
+    },
+    "Riese Veneto": {
+      "qid": "Q46787",
+      "label_it": "Riese Veneto",
+      "label_en": "Riese Veneto",
+      "result": "ok",
+      "checked": "2026-11-20"
+    },
+    "public domain": {
+      "qid": "Q19652",
+      "label_it": "public domain",
+      "label_en": "public domain",
+      "result": "ok",
+      "checked": "2026-11-20"
+    },
+    "copyrighted": {
+      "qid": "Q50423863",
+      "label_it": "copyrighted",
+      "label_en": "copyrighted",
+      "result": "ok",
+      "checked": "2026-11-20"
+    },
+    "postcard": {
+      "qid": "Q192425",
+      "label_it": "postcard",
+      "label_en": "postcard",
+      "result": "ok",
+      "checked": "2026-11-20"
+    },
+    "photograph": {
+      "qid": "Q125191",
+      "label_it": "photograph",
+      "label_en": "photograph",
+      "result": "ok",
+      "checked": "2026-11-20"
+    },
+    "circa": {
+      "qid": "Q5727902",
+      "label_it": "circa",
+      "label_en": "circa",
+      "result": "ok",
+      "checked": "2026-11-20"
+    },
+    "Sansaini": {
+      "qid": null,
+      "label_it": "Sansaini",
+      "label_en": "Sansaini",
+      "result": "not_found",
+      "checked": "2026-11-20"
+    },
+    "Stab. Sansaini - Roma": {
+      "qid": null,
+      "label_it": "Stab. Sansaini - Roma",
+      "label_en": "Stab. Sansaini - Roma",
+      "result": "not_found",
+      "checked": "2026-11-20"
+    },
+    "Arti Grafiche Pezzini": {
+      "qid": null,
+      "label_it": "Arti Grafiche Pezzini",
+      "label_en": "Arti Grafiche Pezzini",
+      "result": "not_found",
+      "checked": "2026-11-20"
+    },
+    "M. Barbieri": {
+      "qid": null,
+      "label_it": "M. Barbieri",
+      "label_en": "M. Barbieri",
+      "result": "not_found",
+      "checked": "2026-11-20"
+    }
+  }
+}

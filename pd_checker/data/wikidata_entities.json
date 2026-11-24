@@ -1,0 +1,104 @@
+{
+  "note": "Wikidata property and item catalog for pd_checker validation. Fetched via wbgetentities API.",
+  "source": "https://www.wikidata.org/w/api.php",
+  "fetched": "2026-11-20",
+  "properties": {
+    "P31": {
+      "label_it": "istanza di",
+      "label_en": "instance of",
+      "datatype": "wikibase-item"
+    },
+    "P170": {
+      "label_it": "creatore",
+      "label_en": "creator",
+      "datatype": "wikibase-item"
+    },
+    "P123": {
+      "label_it": "editore",
+      "label_en": "publisher",
+      "datatype": "wikibase-item"
+    },
+    "P180": {
+      "label_it": "raffigura",
+      "label_en": "depicts",
+      "datatype": "wikibase-item"
+    },
+    "P275": {
+      "label_it": "licenza",
+      "label_en": "license",
+      "datatype": "wikibase-item"
+    },
+    "P571": {
+      "label_it": "data di creazione",
+      "label_en": "inception",
+      "datatype": "time"
+    },
+    "P6216": {
+      "label_it": "stato del copyright",
+      "label_en": "copyright status",
+      "datatype": "wikibase-item"
+    },
+    "P7482": {
+      "label_it": "origine del file",
+      "label_en": "file origin",
+      "datatype": "string"
+    },
+    "P1480": {
+      "label_it": "circostanze della fonte",
+      "label_en": "source circumstances",
+      "datatype": "wikibase-item"
+    },
+    "P1319": {
+      "label_it": "stima di",
+      "label_en": "estimate of",
+      "datatype": "wikibase-item"
+    },
+    "P1326": {
+      "label_it": "data massima",
+      "label_en": "latest date",
+      "datatype": "time"
+    }
+  },
+  "items": {
+    "Q192425": {
+      "label_it": "cartolina postale",
+      "label_en": "postcard"
+    },
+    "Q125191": {
+      "label_it": "fotografia",
+      "label_en": "photograph"
+    },
+    "Q19652": {
+      "label_it": "pubblico dominio",
+      "label_en": "public domain"
+    },
+    "Q50423863": {
+      "label_it": "copyright",
+      "label_en": "copyrighted"
+    },
+    "Q507540": {
+      "label_it": "Rafael Merry del Val",
+      "label_en": "Rafael Merry del Val"
+    },
+    "Q43739": {
+      "label_it": "Papa Pio X",
+      "label_en": "Pope Pius X"
+    },
+    "Q3437": {
+      "label_it": "Perugia",
+      "label_en": "Perugia"
+    },
+    "Q46787": {
+      "label_it": "Riese Pio X",
+      "label_en": "Riese Pio X"
+    },
+    "Q5727902": {
+      "label_it": "circa",
+      "label_en": "circa"
+    },
+    "Q1985727": {
+      "label_it": "periodico",
+      "label_en": "periodical"
+    }
+  }
+}

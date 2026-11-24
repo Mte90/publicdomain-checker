@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pd-checker"
+version = "0.1.0"
+description = "Tool to check public-domain status of scanned material and prepare Commons/Wikidata metadata"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+pd-checker = "pd_checker.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pd_checker*"]
+
+[tool.setuptools.package-data]
+pd_checker = ["data/*.json"]
