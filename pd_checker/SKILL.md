@@ -376,6 +376,7 @@ python3 -m pd_checker push Cardinale-Del-Val --live --filename-prefix "Merry del
 - `publisher` (str|null): publisher imprint found in the document (e.g., "Stab. Sansaini - Roma"); used for country suggestion and anonymous contradiction detection
 - `is_vatican_asset` (bool|null): true when the item is a Vatican asset (distinct from rights_holder == "holy_see")
 - `set_id` (physical object: groups front/back), `part` (`front|back|single`), `series_id` (related items), `images` (all files for the item: front + back)
+- `has_handwriting` (bool|null): true when the item has handwritten text (address, message, signature of the sender); used for Art. 93 correspondence-consent trigger. Set true for any handwritten content on the item.
 
 ## Verdict schema (output)
 
@@ -494,11 +495,17 @@ shorter term (Art. 188): they are protected in Italy no longer than at origin.
 
 | Case | Templates | Reason |
 |------|-----------|--------|
-| Italian simple photo, PD, author known/irrelevant | `{{PD-Italy}}`, `{{PD-1996}}` | PD-Italy for Italian photos; PD-1996 for US pre-1989 works |
-| Italian simple photo, PD, anonymous/pseudonymous | `{{PD-Italy}}`, `{{PD-anon-70-EU}}`, `{{PD-1996}}` | PD-anon-70-EU for anonymous EU works |
-| Artistic photo, PD, author death >70y ago | `{{PD-old-70}}`, `{{PD-1996}}` | PD-old-70 for life+70; PD-1996 for US pre-1989 works |
-| Anonymous/pseudonymous work, PD | `{{PD-anon-70-EU}}`, `{{PD-Italy}}` | EU anonymous works |
+| Italian simple photo, PD, author known/irrelevant | `{{PD-Italy}}` | PD-Italy for Italian photos; **{{PD-1996}} only if pd_year <= 1996** (URAA condition) |
+| Italian simple photo, PD, anonymous/pseudonymous | `{{PD-Italy}}`, `{{PD-anon-70-EU}}` | PD-anon-70-EU for anonymous EU works; **{{PD-1996}} only if pd_year <= 1996** |
+| Artistic photo, PD, author death >70y ago | `{{PD-old-70}}` | PD-old-70 for life+70; **{{PD-1996}} only if pd_year <= 1996** (URAA condition) |
+| Anonymous/pseudonymous work, PD | `{{PD-anon-70-EU}}`, `{{PD-Italy}}` | EU anonymous works; **{{PD-1996}} only if pd_year <= 1996** |
 | Not in PD / uncertain | `[]` | No templates |
+
+**URAA condition for {{PD-1996}}**: The template requires that the work was already in the public domain in its source country on 1996-01-01 (the URAA date). If `pd_year > 1996`, the work was NOT PD on that date, so:
+- `{{PD-1996}}` is NOT attached
+- The verdict includes `us_status: {"restored_until": pd_year + 96, "basis": "URAA"}`
+- The upload flag is blocked with an Italian note explaining the US restoration
+- The copyright verdict itself remains correct (PD in country of origin is still TRUE)
 
 **Note**: `{{PD-Italy-photo}}` does NOT exist (404). Use `{{PD-Italy}}` for Italian simple photographs.
 
@@ -641,6 +648,16 @@ When using `all` policy:
 - **Licence templates remain unchanged** — uncertain items still get NO PD licence tags
   - The invariant: the tool states the facts; the human chooses to proceed
   - This is NOT a dark pattern: the reason strings are the user's informed-consent surface
+
+### Commons acceptance is a per-file fact, not a policy choice
+
+Under every policy, push refuses items that fail the Commons checklist — Commons acceptance is a per-file fact, not a policy choice. The checklist has three requirements:
+
+1. **Licence tag present** — an item whose page would carry no licence tag is refused with `[RIFIUTATO] <file>: nessun tag di licenza — Commons avvierà la cancellazione`
+2. **Source declared** — an item with `information.source` empty or in {"", "non specificato", "da confermare", "n/d"} is refused with `[RIFIUTATO] <file>: fonte non dichiarata — Commons segnala i file senza fonte`
+3. **At least one category** — an item with no `commons_categories` is refused with `[RIFIUTATO] <file>: nessuna categoria — Commons segnala i file non categorizzati`
+
+Refused items are never planned in dry-run and never uploaded in live. If all items are refused, the command exits with code 1. This design ensures that the bot cannot cause Commons deletions for any user.
 
 This design ensures that when a user overrides the tool's caution, the audit trail remains honest about what the tool actually knows vs. what the human decided to do anyway.
 

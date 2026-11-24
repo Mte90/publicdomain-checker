@@ -189,6 +189,138 @@ def _settle(result: dict, current_year: int, *, pd_reason: str, npd_reason: str,
     return result
 
 
+def _home_pd_by_1996(facts: dict, photo_class: str, ref_year: int) -> tuple[bool, str]:
+    """Home-country public-domain status on 1996-01-01, under the term in force then, per class.
+    
+    Returns:
+        Tuple of (eligible: bool, evidence: str)
+        - eligible: True if the work was already PD in its home country on 1996-01-01
+        - evidence: Italian explanation string for the verdict notes
+    """
+    if photo_class == "simple":
+        # photographs: 20 years from production (Art. 92 as then in force)
+        expiry = ref_year + 20
+        return expiry <= 1996, f"termine ventennale scaduto nel {expiry}"
+    
+    if facts.get("is_anonymous"):
+        # anonymous/pseudonymous non-photographic: 50 years from first publication (Art. 27 pre-reform)
+        expiry = ref_year + 50
+        return expiry <= 1996, f"termine cinquantennale anonimo scaduto nel {expiry}"
+    
+    death = facts.get("author_death_year")
+    if death:
+        # named author: life + 50 (pre-reform)
+        expiry = death + 50
+        return expiry <= 1996, f"termine morte+50 scaduto nel {expiry}"
+    
+    return False, "morte dell'autore sconosciuta: stato al 1996 non dimostrabile"
+
+
+def _apply_uraa_condition(templates: list, pd_year: int, current_year: int, facts: dict, 
+                          photo_class: str | None = None, ref_year: int | None = None) -> tuple[list, dict | None, str | None]:
+    """Apply URAA condition to PD-1996 template.
+    
+    The {{PD-1996}} template requires that the work was already in the public domain
+    in its source country on 1996-01-01 (the URAA date). This is evaluated UNDER THE 
+    LAW THEN IN FORCE, PER CLASS — not via the post-reform pd_year.
+    
+    Args:
+        templates: List of templates to filter
+        pd_year: The year the work entered public domain in its country of origin (current law)
+        current_year: Current year for computing restoration expiry
+        facts: Extracted facts dict
+        photo_class: Photo classification ("simple"|"artistic"|"unclear"), required for per-class judgment
+        ref_year: Reference year (publication/production), required for per-class judgment
+    
+    Returns:
+        Tuple of (filtered_templates, us_status_info, evidence_note)
+        - filtered_templates: templates list with PD-1996 removed if not eligible
+        - us_status_info: dict with restoration info if PD-1996 was removed, None otherwise
+        - evidence_note: Italian evidence string if PD-1996 is kept, None otherwise
+    """
+    filtered = list(templates)
+    us_status = None
+    evidence_note = None
+    
+    # Check if PD-1996 is in templates
+    if "{{PD-1996}}" in filtered:
+        # Use per-class judge if photo_class and ref_year are provided
+        if photo_class is not None and ref_year is not None:
+            eligible, evidence = _home_pd_by_1996(facts, photo_class, ref_year)
+        else:
+            # Fallback to old pd_year-based logic for backward compatibility
+            eligible = pd_year <= 1996
+            evidence = f"PD nel {pd_year}"
+        
+        if eligible:
+            # Work was already PD on 1996-01-01: keep PD-1996, add evidence note
+            evidence_note = f"PD-1996: in pubblico dominio in Italia dal {evidence}"
+        else:
+            # Work was NOT PD on 1996-01-01: remove PD-1996 and add US restoration info
+            filtered.remove("{{PD-1996}}")
+            
+            # Compute restoration expiry: pub_year + 96 (URAA 95-year max term)
+            restoration_expiry = ref_year + 96 if ref_year else pd_year + 96
+            
+            us_status = {
+                "restored_until": restoration_expiry,
+                "basis": "URAA"
+            }
+            
+            # Add Italian note about US restoration
+            note = (f"Copyright negli Stati Uniti ripristinato dall'URAA (opera ancora protetta nel paese d'origine "
+                    f"al 1° gennaio 1996): PD USA previsto dal {restoration_expiry}.")
+            # Note will be added by caller to the appropriate notes list
+    
+    return filtered, us_status, evidence_note
+
+
+
+def _detect_handwriting(facts: dict) -> bool:
+    """Detect if the item has handwriting (for Art. 93 correspondence consent trigger).
+    
+    Preferred signal: has_handwriting field (true/false/null)
+    Backward-compatible fallback: document_type in {postcard, letter} AND
+        (visible_text matches handwriting markers OR postmark is non-null)
+    
+    Handwriting markers (case-insensitive): "handwritten", "scritto a mano", 
+        "manoscritto", "autografo"
+    
+    Args:
+        facts: Extracted facts dict
+    
+    Returns:
+        True if handwriting is detected, False otherwise
+    """
+    # Preferred: explicit has_handwriting field
+    has_handwriting = facts.get("has_handwriting")
+    if has_handwriting is not None:
+        return bool(has_handwriting)
+    
+    # Fallback detection
+    doc_type = (facts.get("document_type") or "").lower()
+    if doc_type not in ("postcard", "letter"):
+        return False
+    
+    # Check visible_text for handwriting markers
+    visible_text = (facts.get("visible_text") or "").lower()
+    visible_text_translation = (facts.get("visible_text_translation") or "").lower()
+    text_combined = f"{visible_text} {visible_text_translation}"
+    
+    handwriting_markers = ["handwritten", "scritto a mano", "manoscritto", "autografo"]
+    for marker in handwriting_markers:
+        if marker in text_combined:
+            return True
+    
+    # Check for postmark (any non-null postmark field indicates handwriting)
+    postmark = facts.get("postmark")
+    if postmark:
+        # Postmark exists (even if all fields are null, its presence indicates a mailed item)
+        return True
+    
+    return False
+
+
 # ============================================================================
 # PER-JURISDICTION ASSESSORS (from jurisdictions.py)
 # ============================================================================
@@ -223,6 +355,11 @@ def _it_photo(facts: dict, current_year: int) -> dict:
     visible_text = facts.get("visible_text") or facts.get("visible_text_translation") or ""
     holder = (facts.get("rights_holder") or "").lower()
     
+    # Art. 93 correspondence-consent trigger for postcards: check for handwriting
+    doc_type = (facts.get("document_type") or "").lower()
+    has_handwriting = _detect_handwriting(facts)
+    postcard_handwriting_blocker = (doc_type == "postcard" and has_handwriting)
+    
     # Determine if author is a printing works/publisher:
     # - Explicit author_role "printer" or "publisher" takes precedence
     # - Otherwise, fall back to marker detection for backward compatibility
@@ -252,20 +389,30 @@ def _it_photo(facts: dict, current_year: int) -> dict:
                 missing_data=["Data di produzione della fotografia."],
                 confidence=_worst("low", vlm),
             )
-        pd_year = _pd_year(ref_year, 70, year_end=False)
         is_estimate = year_source == "visual_estimate"
         
-        # Check estimate margin BEFORE any public_domain return
-        margin_check = _check_estimate_margin(ref_year, year_source, current_year, pd_year, [_ART_92])
+        # Determine the OPERATIVE term first: 20y-no-revival for production ≤2004, 70y for ≥2005
+        if ref_year + 20 < _SIMPLE_PHOTO_REFORM_YEAR:
+            # Pre-reform: 20-year term already expired before L.182/2025 took effect
+            # Dominant reading: no revival → public domain
+            operative_term = 20
+            operative_pd_year = ref_year + 20  # 20y expiry (no year-end for 20y term per Art. 92 original)
+        else:
+            # Post-reform: 70-year term applies
+            operative_term = 70
+            operative_pd_year = _pd_year(ref_year, 70, year_end=False)
+        
+        # Check estimate margin against the OPERATIVE expiry
+        margin_check = _check_estimate_margin(ref_year, year_source, current_year, operative_pd_year, [_ART_92])
         if margin_check is not None:
             return margin_check
         
         # Check no-evidence guard: pure visual guess with no textual evidence
-        no_evidence_check = _check_no_evidence(facts, ref_year, year_source, current_year, pd_year, [_ART_92])
+        no_evidence_check = _check_no_evidence(facts, ref_year, year_source, current_year, operative_pd_year, [_ART_92])
         if no_evidence_check is not None:
             return no_evidence_check
         
-        result = _result(pd_year=pd_year, legal_basis=[_ART_92],
+        result = _result(pd_year=operative_pd_year, legal_basis=[_ART_92],
                          notes=["# Commons: PD-Italy e' il nome corretto per le foto semplici italiane; "
                                 "non usare {{PD-old-70}} su una foto anonima."])
         
@@ -280,15 +427,10 @@ def _it_photo(facts: dict, current_year: int) -> dict:
                 f"ATTENZIONE: il campo 'author' ('{author}') sembra essere uno stabilimento di stampa, non una persona; "
                 "non usare questo valore per Art. 25."
             )
-        if current_year >= pd_year:
-            pd_reason_base = f"Fotografia semplice del {ref_year}" if not is_estimate else f"Fotografia semplice del {ref_year} (anno stimato)"
-            return _settle(result, current_year,
-                           pd_reason=f"{pd_reason_base}: diritto connesso "
-                                     f"(Art. 92, 70 anni) scaduto nel {pd_year}.",
-                            npd_reason="", templates=["{{PD-Italy}}", "{{PD-1996}}"], confidence=_worst("high", vlm))
-        if ref_year + 20 < _SIMPLE_PHOTO_REFORM_YEAR:
-            # New term not yet expired, but the 20-year term was already over when
-            # L. 182/2025 took effect (18 Dec 2025). Dominant reading: no revival.
+        
+        # Apply the operative term logic
+        if operative_term == 20:
+            # 20-year no-revival path: already expired before reform
             year_desc = f"del {ref_year} (anno stimato)" if is_estimate else f"del {ref_year}"
             result["status"] = PUBLIC_DOMAIN
             result["reason"] = (
@@ -300,12 +442,39 @@ def _it_photo(facts: dict, current_year: int) -> dict:
                 "La L. 182/2025 non ha norme transitorie: la non-riattivazione e' un'interpretazione, "
                 "non una regola scritta (confidenza limitata)."
             )
-            result["commons_templates"] = ["{{PD-Italy}}", "{{PD-1996}}"]
+            templates, us_status, evidence_note = _apply_uraa_condition(["{{PD-Italy}}", "{{PD-1996}}"], operative_pd_year, current_year, facts, photo_class, ref_year)
+            if us_status:
+                result["notes"].append((f"Copyright negli Stati Uniti ripristinato dall'URAA (opera ancora protetta nel paese d'origine "
+                                       f"al 1° gennaio 1996): PD USA previsto dal {us_status['restored_until']}."))
+            elif evidence_note:
+                result["notes"].append(evidence_note)
+            result["commons_templates"] = templates
+            if us_status:
+                result["notes"].append((f"Copyright negli Stati Uniti ripristinato dall'URAA (opera ancora protetta nel paese d'origine "
+                                       f"al 1° gennaio 1996): PD USA previsto dal {us_status['restored_until']}."))
             result["confidence"] = _worst("medium", vlm)
             return result
-        return _settle(result, current_year, pd_reason="",
-                       npd_reason=f"Fotografia semplice del {ref_year}{' (anno stimato)' if is_estimate else ''}; scadenza 70 anni nel {pd_year}.",
-                       confidence=_worst("high", vlm))
+        else:
+            # 70-year term path (ref_year ≥ 2005)
+            if current_year >= operative_pd_year:
+                pd_reason_base = f"Fotografia semplice del {ref_year}" if not is_estimate else f"Fotografia semplice del {ref_year} (anno stimato)"
+                templates, us_status, evidence_note = _apply_uraa_condition(["{{PD-Italy}}", "{{PD-1996}}"], operative_pd_year, current_year, facts, photo_class, ref_year)
+                if us_status:
+                    result["notes"].append((f"Copyright negli Stati Uniti ripristinato dall'URAA (opera ancora protetta nel paese d'origine "
+                                           f"al 1° gennaio 1996): PD USA previsto dal {us_status['restored_until']}."))
+                elif evidence_note:
+                    result["notes"].append(evidence_note)
+                result["commons_templates"] = templates
+                if us_status:
+                    result["notes"].append((f"Copyright negli Stati Uniti ripristinato dall'URAA (opera ancora protetta nel paese d'origine "
+                                           f"al 1° gennaio 1996): PD USA previsto dal {us_status['restored_until']}."))
+                return _settle(result, current_year,
+                               pd_reason=f"{pd_reason_base}: diritto connesso "
+                                         f"(Art. 92, 70 anni) scaduto nel {operative_pd_year}.",
+                               npd_reason="", templates=templates, confidence=_worst("high", vlm))
+            return _settle(result, current_year, pd_reason="",
+                           npd_reason=f"Fotografia semplice del {ref_year}{' (anno stimato)' if is_estimate else ''}; scadenza 70 anni nel {operative_pd_year}.",
+                           confidence=_worst("high", vlm))
 
     if photo_class == "artistic":
         # Determine if author is a printing works/publisher (same logic as simple photo)
@@ -359,12 +528,19 @@ def _it_photo(facts: dict, current_year: int) -> dict:
                 return no_evidence_check
             
             result = _result(pd_year=pd_year, legal_basis=[_ART_27], notes=notes_list)
+            templates, us_status, evidence_note = _apply_uraa_condition(["{{PD-anon-70-EU}}", "{{PD-1996}}"], pd_year, current_year, facts, "artistic", ref_year)
+            if us_status:
+                notes_list.append((f"Copyright negli Stati Uniti ripristinato dall'URAA (opera ancora protetta nel paese d'origine "
+                                   f"al 1° gennaio 1996): PD USA previsto dal {us_status['restored_until']}."))
+                result["us_status"] = us_status
+            elif evidence_note:
+                notes_list.append(evidence_note)
             return _settle(result, current_year,
                            pd_reason=f"Opera fotografica anonima/collettiva pubblicata nel {ref_year}: "
                                      f"70 anni (Art. 27) scaduti nel {pd_year}.",
                            npd_reason=f"Opera anonima/collettiva del {ref_year}; scadenza nel {pd_year}.",
                             # Anonymous artistic photo: PD-anon-70-EU (not PD-Italy which is simple-photo tag) + US rationale
-                            templates=["{{PD-anon-70-EU}}", "{{PD-1996}}"], confidence=_worst("medium", vlm))
+                            templates=templates, confidence=_worst("medium", vlm))
         if author and death and not author_is_printing_work:
             pd_year = _pd_year(death, 70)
             is_estimate = year_source == "visual_estimate"
@@ -375,12 +551,18 @@ def _it_photo(facts: dict, current_year: int) -> dict:
                 return margin_check
             
             result = _result(pd_year=pd_year, legal_basis=[_ART_25], notes=notes_list)
+            templates, us_status, evidence_note = _apply_uraa_condition(["{{PD-old-70}}", "{{PD-1996}}"], pd_year, current_year, facts, "artistic", ref_year)
+            if us_status:
+                notes_list.append((f"Copyright negli Stati Uniti ripristinato dall'URAA (opera ancora protetta nel paese d'origine "
+                                   f"al 1° gennaio 1996): PD USA previsto dal {us_status['restored_until']}."))
+            elif evidence_note:
+                notes_list.append(evidence_note)
             return _settle(result, current_year,
                            pd_reason=f"Opera fotografica di {author} (morto nel {death}): vita+70 "
                                      f"scaduto nel {pd_year}.",
                            npd_reason=f"Opera di {author} (morto nel {death}); scadenza nel {pd_year}.",
                             # Author death >70y: PD-old-70 + PD-1996 (US tag for pre-1989 works)
-                            templates=["{{PD-old-70}}", "{{PD-1996}}"], confidence=_worst("high", vlm))
+                            templates=templates, confidence=_worst("high", vlm))
         if author_is_printing_work:
             # Author looks like a printing works, not a person - fall through to Art. 27 (anonymous/collective)
             if ref_year is None:
@@ -404,11 +586,17 @@ def _it_photo(facts: dict, current_year: int) -> dict:
             
             result = _result(pd_year=pd_year, legal_basis=[_ART_27],
                              notes=notes_list + [f"Il campo 'author' ('{author}') sembra essere uno stabilimento di stampa; si usa Art. 27 (opera collettiva)."])
+            templates, us_status, evidence_note = _apply_uraa_condition(["{{PD-anon-70-EU}}", "{{PD-1996}}"], pd_year, current_year, facts, "artistic", ref_year)
+            if us_status:
+                result["notes"].append((f"Copyright negli Stati Uniti ripristinato dall'URAA (opera ancora protetta nel paese d'origine "
+                                       f"al 1° gennaio 1996): PD USA previsto dal {us_status['restored_until']}."))
+            elif evidence_note:
+                result["notes"].append(evidence_note)
             return _settle(result, current_year,
                            pd_reason=f"Opera fotografica collettiva pubblicata nel {ref_year}: "
                                      f"70 anni (Art. 27) scaduti nel {pd_year}.",
                            npd_reason=f"Opera collettiva del {ref_year}; scadenza nel {pd_year}.",
-                            templates=["{{PD-anon-70-EU}}", "{{PD-1996}}"], confidence=_worst("medium", vlm))
+                            templates=templates, confidence=_worst("medium", vlm))
         return _result(
             reason="Opera fotografica con autore noto ma senza data di morte: impossibile calcolare vita+70.",
             legal_basis=[_ART_25],
@@ -428,6 +616,10 @@ def _it_letter(facts: dict, current_year: int) -> dict:
     vlm = facts.get("vlm_confidence") or "low"
     author = facts.get("author")
     death = facts.get("author_death_year")
+    
+    # Art. 93 correspondence-consent trigger: check for handwriting
+    has_handwriting = _detect_handwriting(facts)
+    
     result = _result(
         status=UNCERTAIN,
         legal_basis=[_ART_25, _ART_93],
@@ -435,6 +627,17 @@ def _it_letter(facts: dict, current_year: int) -> dict:
                       "Verificare privacy e consenso degli eredi."],
         confidence=_worst("medium" if (author and death) else "low", vlm),
     )
+    
+    # Add correspondence-consent blocker when handwriting is detected
+    if has_handwriting:
+        # Art. 93: correspondence requires consent of the recipient (or their heirs)
+        # This is a non-copyright blocker that prevents upload
+        if "blockers_non_copyright" not in result:
+            result["blockers_non_copyright"] = []
+        result["blockers_non_copyright"].append(
+            "Corrispondenza manoscritta: serve il consenso del destinatario (o degli eredi) ai sensi dell'Art. 93."
+        )
+    
     if author and death:
         result["pd_year"] = _pd_year(death, 70)
         state = "scaduto" if current_year >= result["pd_year"] else f"scade nel {result['pd_year']}"
@@ -458,12 +661,18 @@ def _it_periodical(facts: dict, current_year: int) -> dict:
         result["confidence"] = _worst("low", vlm)
         return result
     result["pd_year"] = _pd_year(ref_year, 70)
+    templates, us_status, evidence_note = _apply_uraa_condition(["{{PD-anon-70-EU}}", "{{PD-1996}}"], result["pd_year"], current_year, facts, None, ref_year)
+    if us_status:
+        result["notes"].append((f"Copyright negli Stati Uniti ripristinato dall'URAA (opera ancora protetta nel paese d'origine "
+                               f"al 1° gennaio 1996): PD USA previsto dal {us_status['restored_until']}."))
+    elif evidence_note:
+        result["notes"].append(evidence_note)
     return _settle(result, current_year,
                    pd_reason=f"Numero del {ref_year}: opera collettiva periodica, 70 anni "
                              f"(Artt. 26/30) scaduti nel {result['pd_year']}.",
                    npd_reason=f"Numero del {ref_year}; scadenza nel {result['pd_year']}.",
                     # Anonymous periodical: PD-anon-70-EU + US rationale (not PD-Italy)
-                    templates=["{{PD-anon-70-EU}}", "{{PD-1996}}"], confidence=_worst("medium", vlm))
+                    templates=templates, confidence=_worst("medium", vlm))
 
 
 def _it_text(facts: dict, current_year: int) -> dict:
@@ -478,18 +687,32 @@ def _it_text(facts: dict, current_year: int) -> dict:
                            legal_basis=[_ART_27], missing_data=["Anno di pubblicazione."],
                            confidence=_worst("low", vlm))
         result = _result(pd_year=_pd_year(ref_year, 70), legal_basis=[_ART_27])
+        templates, us_status, evidence_note = _apply_uraa_condition(["{{PD-anon-70-EU}}", "{{PD-1996}}"], result["pd_year"], current_year, facts, None, ref_year)
+        if us_status:
+            result["notes"].append((f"Copyright negli Stati Uniti ripristinato dall'URAA (opera ancora protetta nel paese d'origine "
+                                   f"al 1° gennaio 1996): PD USA previsto dal {us_status['restored_until']}."))
+        elif evidence_note:
+            result["notes"].append(evidence_note)
         return _settle(result, current_year,
                        pd_reason=f"Manoscritto anonimo del {ref_year}: 70 anni scaduti nel {result['pd_year']}.",
                        npd_reason=f"Manoscritto anonimo del {ref_year}; scadenza nel {result['pd_year']}.",
                         # Anonymous manuscript: PD-anon-70-EU + US rationale (not PD-Italy)
-                        templates=["{{PD-anon-70-EU}}", "{{PD-1996}}"], confidence=_worst("medium", vlm))
+                        templates=templates, confidence=_worst("medium", vlm))
     if author and death:
         result = _result(pd_year=_pd_year(death, 70), legal_basis=[_ART_25])
+        # For named-author texts, use death+50 as the pre-reform term
+        templates, us_status, evidence_note = _apply_uraa_condition(["{{PD-old-70}}", "{{PD-1996}}"], result["pd_year"], current_year, facts, None, death)
+        if us_status:
+            verdict["us_status"] = us_status
+            result["notes"].append((f"Copyright negli Stati Uniti ripristinato dall'URAA (opera ancora protetta nel paese d'origine "
+                                   f"al 1° gennaio 1996): PD USA previsto dal {us_status['restored_until']}."))
+        elif evidence_note:
+            result["notes"].append(evidence_note)
         return _settle(result, current_year,
                        pd_reason=f"Manoscritto di {author} (morto nel {death}): vita+70 scaduto nel {result['pd_year']}.",
                        npd_reason=f"Manoscritto di {author} (morto nel {death}); scadenza nel {result['pd_year']}.",
                         # Author death >70y: PD-old-70 + PD-1996 (US tag for pre-1989 works)
-                        templates=["{{PD-old-70}}", "{{PD-1996}}"], confidence=_worst("high", vlm))
+                        templates=templates, confidence=_worst("high", vlm))
     return _result(reason="Manoscritto senza autore identificato ne' data.",
                    legal_basis=[_ART_25, _ART_27],
                    missing_data=["Identificare l'autore (e la data di morte) o l'anno di pubblicazione."],
@@ -528,11 +751,17 @@ def _gb(facts: dict, current_year: int) -> dict:
                 # Therefore a UK photo taken in 1910 with unknown author IS PD in 2026.
                 pd_year = _pd_year(ref_year, 50)
                 result = _result(pd_year=pd_year, legal_basis=[_CDPA_SCH1], notes=notes)
+                templates, us_status, evidence_note = _apply_uraa_condition(["{{PD-anon-70}}", "{{PD-1996}}"], pd_year, current_year, facts, None, ref_year)
+                if us_status:
+                    result["notes"].append((f"Copyright negli Stati Uniti ripristinato dall'URAA (opera ancora protetta nel paese d'origine "
+                                           f"al 1° gennaio 1996): PD USA previsto dal {us_status['restored_until']}."))
+                elif evidence_note:
+                    result["notes"].append(evidence_note)
                 return _settle(result, current_year,
                                pd_reason=f"Foto britannica anonima del {ref_year}: regola dei 50 anni (CDPA Sch.1) "
                                          f"scaduta nel {pd_year}.",
                                npd_reason=f"Foto anonima del {ref_year}; scadenza nel {pd_year}.",
-                               templates=["{{PD-anon-70}}", "{{PD-1996}}"], confidence=_worst("high", vlm))
+                               templates=templates, confidence=_worst("high", vlm))
             result = _result(pd_year=_pd_year(ref_year, 70), legal_basis=[_CDPA_12_3], notes=notes)
             return _settle(result, current_year,
                            pd_reason=f"Opera britannica con autore ignoto, realizzata nel {ref_year}: "
@@ -576,11 +805,16 @@ def _va(facts: dict, current_year: int) -> dict:
         # (not just when rights_holder == 'holy_see')
         if death and not is_anon:
             result = _result(pd_year=_pd_year(death, 70), legal_basis=[basis])
+            templates, us_status, evidence_note = _apply_uraa_condition(_VA_GENERIC_TEMPLATES_OLD, _pd_year(death, 70), current_year, facts, None, death)
+            if us_status:
+                result["notes"] = result.get("notes", []) + [f"Copyright negli Stati Uniti ripristinato dall'URAA (opera ancora protetta nel paese d'origine al 1° gennaio 1996): PD USA previsto dal {us_status['restored_until']}."]
+            elif evidence_note:
+                result["notes"] = result.get("notes", []) + [evidence_note]
             return _settle(result, current_year,
                            pd_reason=f"Opera vaticana (Santa Sede), autore morto nel {death}: scaduta nel {result['pd_year']}.",
                            npd_reason=f"Opera vaticana (Santa Sede), autore morto nel {death}; scadenza nel {result['pd_year']}.",
                            # VA has no country-specific tag; use generic old-70 + US rationale
-                           templates=_VA_GENERIC_TEMPLATES_OLD,
+                           templates=templates,
                            notes=["La Santa Sede non ha un tag Commons dedicato: si usa il generico PD-old-70."],
                            confidence=_worst("medium", vlm))
         if ref_year is None:
@@ -588,11 +822,16 @@ def _va(facts: dict, current_year: int) -> dict:
                            legal_basis=[basis], missing_data=["Anno di pubblicazione o fissazione."],
                            confidence=_worst("low", vlm))
         result = _result(pd_year=_pd_year(ref_year, 70), legal_basis=[basis])
+        templates, us_status, evidence_note = _apply_uraa_condition(_VA_GENERIC_TEMPLATES_ANON, _pd_year(ref_year, 70), current_year, facts, None, ref_year)
+        if us_status:
+            result["notes"] = result.get("notes", []) + [f"Copyright negli Stati Uniti ripristinato dall'URAA (opera ancora protetta nel paese d'origine al 1° gennaio 1996): PD USA previsto dal {us_status['restored_until']}."]
+        elif evidence_note:
+            result["notes"] = result.get("notes", []) + [evidence_note]
         return _settle(result, current_year,
                        pd_reason=f"Opera vaticana pubblicata nel {ref_year}: 70 anni scaduti nel {result['pd_year']}.",
                        npd_reason=f"Opera vaticana pubblicata nel {ref_year}; scadenza nel {result['pd_year']}.",
                        # VA has no country-specific Commons tag; use generic EU anonymous + US rationale
-                       templates=_VA_GENERIC_TEMPLATES_ANON,
+                       templates=templates,
                        notes=["La Santa Sede non ha un tag Commons dedicato: si usa il generico PD-anon-70-EU."],
                        confidence=_worst("medium", vlm))
 
@@ -629,7 +868,7 @@ def assess(country: str, facts: dict, current_year: int) -> dict:
 # ENGINE ORCHESTRATION (from engine.py)
 # ============================================================================
 
-RULE_TABLE_VERSION = "multi@2026-02 [IT L.633/1941+L.182/2025 | GB CDPA 1988 | VA L.CXCVII/2017]"
+RULE_TABLE_VERSION = "multi@2026-02-URAA [IT L.633/1941+L.182/2025 | GB CDPA 1988 | VA L.CXCVII/2017 | URAA condition]"
 
 # Upload flag constants
 UPLOAD_READY = "ready"
@@ -648,7 +887,7 @@ _FACTS_FIELDS = (
     "document_type", "country_of_origin", "rights_holder", "author", "author_nationality",
     "author_death_year", "is_anonymous", "author_role", "photo_classification", "reference_year",
     "year_source", "visible_text", "visible_text_translation", "visible_text_lang",
-    "translation_lang", "has_identifiable_people", "vlm_confidence", "set_id", "part", "series_id",
+    "translation_lang", "has_identifiable_people", "has_handwriting", "vlm_confidence", "set_id", "part", "series_id",
     "date_evidence", "images", "postmark", "publisher", "is_vatican_asset",
 )
 
@@ -659,16 +898,31 @@ def _set_upload_flag(verdict: dict, policy: str = UPLOAD_POLICY_STRICT) -> None:
     Criteria (transparent, ordered):
     - flag = "no" when status == "not_public_domain".
     - strict policy: flag = "ready" when status == "public_domain" AND confidence in ("high","medium") 
-      AND blockers_non_copyright is empty AND missing_data is empty.
+      AND blockers_non_copyright is empty AND missing_data is empty AND US status is OK.
     - pd-only policy: flag = "ready" when status == "public_domain" AND confidence in ("high","medium")
       (non-copyright blockers are reported but do not prevent ready).
     - all policy: flag = "ready" for every item; reason keeps caveats for informed consent.
     - otherwise flag = "review".
+    
+    URAA check: items with us_status.restored_until > current_year are NOT ready for upload
+    because Commons requires US public domain status too.
     """
     status = verdict.get("status")
     confidence = verdict.get("confidence", "low")
     blockers = verdict.get("blockers_non_copyright", [])
     missing = verdict.get("missing_data", [])
+    us_status = verdict.get("us_status")
+    current_year = verdict.get("_current_year", 2026)  # Passed from engine
+    
+    # Check US restoration status - this blocks upload regardless of policy
+    us_restored = False
+    us_reason = ""
+    if us_status and us_status.get("restored_until") and current_year:
+        restored_until = us_status["restored_until"]
+        if restored_until > current_year:
+            us_restored = True
+            us_reason = (f"Copyright negli Stati Uniti ripristinato dall'URAA: previsto PD dal {restored_until}. "
+                        "Commons richiede anche il pubblico dominio negli USA.")
     
     if status == NOT_PUBLIC_DOMAIN:
         verdict["upload"] = {
@@ -682,7 +936,7 @@ def _set_upload_flag(verdict: dict, policy: str = UPLOAD_POLICY_STRICT) -> None:
         
         if policy == UPLOAD_POLICY_ALL:
             # all: every item is ready, but reason keeps caveats for informed consent
-            if not has_non_copyright_blockers and not has_missing_data:
+            if not has_non_copyright_blockers and not has_missing_data and not us_restored:
                 verdict["upload"] = {
                     "flag": UPLOAD_READY,
                     "reason": "In pubblico dominio, nessun vincolo: candidato per l'import manuale."
@@ -693,33 +947,48 @@ def _set_upload_flag(verdict: dict, policy: str = UPLOAD_POLICY_STRICT) -> None:
                     blocker_parts.append("non-copyright: " + ", ".join(blockers))
                 if has_missing_data:
                     blocker_parts.append("dati mancanti: " + ", ".join(missing))
+                if us_restored:
+                    blocker_parts.append(us_reason)
                 verdict["upload"] = {
                     "flag": UPLOAD_READY,
                     "reason": f"Politica 'all': caricamento voluto dall'utente; rimangono i blocchi: {'; '.join(blocker_parts)}."
                 }
         elif policy == UPLOAD_POLICY_STRICT:
-            # Strict: both non-copyright blockers and missing data prevent ready
-            if not has_non_copyright_blockers and not has_missing_data:
+            # Strict: both non-copyright blockers, missing data, and US restoration prevent ready
+            if not has_non_copyright_blockers and not has_missing_data and not us_restored:
                 verdict["upload"] = {
                     "flag": UPLOAD_READY,
                     "reason": "In pubblico dominio, nessun vincolo: candidato per l'import manuale."
                 }
             else:
+                blocker_parts = []
+                if has_non_copyright_blockers:
+                    blocker_parts.append("vincoli non-copyright")
+                if has_missing_data:
+                    blocker_parts.append("dati mancanti")
+                if us_restored:
+                    blocker_parts.append(us_reason)
                 verdict["upload"] = {
                     "flag": UPLOAD_REVIEW,
-                    "reason": "In pubblico dominio ma con vincoli o confidenza bassa: rivedere prima."
+                    "reason": "In pubblico dominio ma con vincoli o confidenza bassa: rivedere prima. " + "; ".join(blocker_parts) if blocker_parts else ""
                 }
         else:  # pd-only
             # pd-only: only missing data prevents ready; non-copyright blockers are reported but ignored
-            if not has_missing_data:
+            # BUT US restoration still blocks because Commons requires US PD
+            if not has_missing_data and not us_restored:
                 verdict["upload"] = {
                     "flag": UPLOAD_READY,
                     "reason": "In pubblico dominio (criterio solo copyright): candidato per l'import manuale."
                 }
             else:
+                blocker_parts = []
+                if has_missing_data:
+                    blocker_parts.append("dati mancanti")
+                if us_restored:
+                    blocker_parts.append(us_reason)
                 verdict["upload"] = {
                     "flag": UPLOAD_REVIEW,
-                    "reason": "In pubblico dominio ma con dati mancanti: rivedere prima."
+                    "reason": "In pubblico dominio ma con " + "; ".join(blocker_parts) + ": rivedere prima."
                 }
     else:
         # uncertain or low confidence
@@ -789,6 +1058,15 @@ def _non_copyright_blockers(verdict: dict, item: dict) -> None:
     elif doc_type in ("photo", "postcard"):
         # No identifiable people detected - empty caveat list
         verdict["caveat_templates"] = []
+    
+    # Art. 93 correspondence-consent trigger for postcards with handwriting
+    # (letters are handled below)
+    if doc_type == "postcard":
+        has_handwriting = _detect_handwriting(item)
+        if has_handwriting:
+            verdict["blockers_non_copyright"].append(
+                "Corrispondenza manoscritta: serve il consenso del destinatario (o degli eredi) ai sensi dell'Art. 93."
+            )
     
     if doc_type == "letter":
         verdict["blockers_non_copyright"].append(
@@ -870,6 +1148,9 @@ def evaluate(item: dict, current_year: int, upload_policy: str = UPLOAD_POLICY_S
         origin.get("notes", []) + italy.get("notes", [])
         if origin_country != "IT" else origin.get("notes", [])
     )
+    # Propagate us_status from origin jurisdiction to top-level verdict
+    if origin.get("us_status"):
+        verdict["us_status"] = origin["us_status"]
     verdict["human_review_required"] = bool(verdict["blockers_non_copyright"]) or verdict["status"] == UNCERTAIN
 
     # A licence tag asserts a legal basis we do not hold while the verdict is uncertain.
@@ -879,13 +1160,26 @@ def evaluate(item: dict, current_year: int, upload_policy: str = UPLOAD_POLICY_S
             "Tag di pubblico dominio non emessi: il verdetto e' incerto."
         ]
     
-    # Cap confidence at "low" when reference_year is set but year_source is visual_estimate
+    # Cap confidence when reference_year is set but year_source is visual_estimate.
+    # For a simple photo judged under the 20-year no-revival term (production <=2004)
+    # the estimate cannot change the PD status, so confidence floors at medium.
+    # Everywhere else the estimate can change the verdict, so it floors at low.
     if item.get("reference_year") is not None and item.get("year_source") == "visual_estimate":
-        if _CONF_RANK.get(verdict["confidence"], 0) > _CONF_RANK["low"]:
-            verdict["confidence"] = "low"
-        verdict["notes"] = verdict.get("notes", []) + [
-            "Anno stimato visivamente: la confidenza e' limitata."
-        ]
+        photo_class = (item.get("photo_classification") or "").lower()
+        ref_year = item["reference_year"]
+        is_20y_no_revival = photo_class == "simple" and ref_year + 20 < _SIMPLE_PHOTO_REFORM_YEAR
+        if is_20y_no_revival:
+            if _CONF_RANK.get(verdict["confidence"], 0) > _CONF_RANK["medium"]:
+                verdict["confidence"] = "medium"
+            verdict["notes"] = verdict.get("notes", []) + [
+                "Anno stimato visivamente: il verdetto di pubblico dominio dipende dal termine ventennale (gia' scaduto prima della riforma)."
+            ]
+        else:
+            if _CONF_RANK.get(verdict["confidence"], 0) > _CONF_RANK["low"]:
+                verdict["confidence"] = "low"
+            verdict["notes"] = verdict.get("notes", []) + [
+                "Anno stimato visivamente: la confidenza e' limitata."
+            ]
     
     # Compute upload flag and reason (advisory for manual review, never automatic trigger)
     _set_upload_flag(verdict, upload_policy)

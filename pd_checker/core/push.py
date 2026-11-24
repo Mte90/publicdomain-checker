@@ -516,6 +516,54 @@ def cmd_push(argv: list[str], live: bool = False) -> int:
         print(f"[push] 0 pronti su {len(items)}; usa --upload-policy per cambiare la politica.")
         return 1
     
+    # Filter out items without license templates (Commons acceptance gate)
+    # An item with no license template would be deleted by Commons
+    # Also check: source declared, at least one category (Commons checklist)
+    valid_items = []
+    refused_items = []  # List of (index, reason_string)
+    
+    for i, item in ready_items:
+        file_path = item.get("file", "unknown")
+        reasons = []
+        
+        # Check 1: License template present
+        commons_templates = item.get("commons_templates", [])
+        license_template = item.get("license_template")
+        if not commons_templates and not license_template:
+            reasons.append("nessun tag di licenza — Commons avvierà la cancellazione")
+        
+        # Check 2: Source declared
+        info = item.get("information", {})
+        source = info.get("source", "") if info else ""
+        invalid_sources = {"", "non specificato", "da confermare", "n/d", None}
+        if source in invalid_sources:
+            reasons.append("fonte non dichiarata — Commons segnala i file senza fonte")
+        
+        # Check 3: At least one category
+        categories = item.get("commons_categories", [])
+        if not categories:
+            reasons.append("nessuna categoria — Commons segnala i file non categorizzati")
+        
+        if reasons:
+            # Refuse with all applicable reasons
+            for reason in reasons:
+                print(f"[RIFIUTATO] {file_path}: {reason}")
+            refused_items.append((i, reasons))
+        else:
+            valid_items.append((i, item))
+    
+    # Report refusals summary
+    if refused_items:
+        total_refused = len(refused_items)
+        print(f"\n[push] {total_refused} item(s) rifiutati (Commons acceptance gate)")
+    
+    # If all items were refused, exit with code 1
+    if not valid_items:
+        print("\n[push] Nessun elemento pronto: tutti gli elementi non soddisfano i requisiti Commons.")
+        return 1
+    
+    ready_items = valid_items
+    
     # Validate filename prefix
     prefix = args.filename_prefix
     if live and not prefix:

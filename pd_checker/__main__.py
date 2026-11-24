@@ -197,6 +197,23 @@ def validate_item(
         blocked = True
         reasons.append(f"missing Information fields: {', '.join(missing_info)}")
     
+    # Check for license template - Commons acceptance gate
+    if not commons_templates:
+        blocked = True
+        reasons.append("nessun tag di licenza: Commons cancellerebbe il file")
+    
+    # Check for source declared - Commons acceptance gate
+    source = information.get("source", "") if information else ""
+    invalid_sources = {"", "non specificato", "da confermare", "n/d", None}
+    if source in invalid_sources:
+        blocked = True
+        reasons.append("fonte non dichiarata: Commons segnerebbe il file")
+    
+    # Check for at least one category - Commons acceptance gate
+    if not commons_categories:
+        blocked = True
+        reasons.append("nessuna categoria: Commons segnala i file non categorizzati")
+    
     upload_flag = upload.get("flag") if isinstance(upload, dict) else None
     if upload_flag != "ready":
         blocked = True

@@ -20,11 +20,13 @@ def _item(**overrides):
 
 
 def test_simple_photo_old_is_public_domain():
+    # Pre-2005 photos use 20-year no-revival term (expired before L.182/2025)
     verdict = engine.evaluate(_item(reference_year=1910), current_year=2026)
     assert verdict["status"] == engine.PUBLIC_DOMAIN
-    assert verdict["pd_year"] == 1980
-    assert verdict["confidence"] == "high"
+    assert verdict["pd_year"] == 1930  # 1910 + 20 years
+    assert verdict["confidence"] == "medium"  # no-revival is an interpretation
     assert "{{PD-Italy}}" in verdict["commons_templates"]
+    assert "{{PD-1996}}" in verdict["commons_templates"]
 
 
 def test_simple_photo_recent_is_not_public_domain():
@@ -139,10 +141,25 @@ def test_photo_always_flags_portrait_right():
     assert any("96-97" in blocker for blocker in verdict["blockers_non_copyright"])
 
 
-def test_visual_estimate_year_caps_confidence_to_low():
-    """When year_source is visual_estimate, confidence is capped at low with a note."""
+def test_visual_estimate_caps_confidence_for_simple_20y_no_revival():
+    """A visual estimate on a simple photo judged under the 20-year no-revival term
+    is capped at medium: the estimate costs confidence but cannot change the PD status
+    (the 20-year expiry is far in the past). A note records the visual estimate."""
     verdict = engine.evaluate(
         _item(reference_year=1910, year_source="visual_estimate"),
+        current_year=2026,
+    )
+    assert verdict["status"] == engine.PUBLIC_DOMAIN
+    assert verdict["confidence"] == "medium"
+    assert any("Anno stimato visivamente" in note for note in verdict["notes"])
+
+
+def test_visual_estimate_still_caps_confidence_to_low_for_other_classes():
+    """Outside the simple 20-year no-revival case (here an artistic anonymous photo),
+    a visual estimate is still capped at low with a note."""
+    verdict = engine.evaluate(
+        _item(photo_classification="artistic", is_anonymous=True,
+              reference_year=1933, year_source="visual_estimate"),
         current_year=2026,
     )
     assert verdict["status"] == engine.PUBLIC_DOMAIN
@@ -169,7 +186,10 @@ def test_visible_text_does_not_cap_confidence():
 
 
 def test_upload_flag_ready_for_clean_public_domain_photo():
-    """Ready case: public_domain photo with high confidence, no portrait blocker, no missing_data."""
+    """Ready case: public_domain photo with confidence, no portrait blocker, no missing_data.
+    
+    Pre-2005 photos use 20-year no-revival term -> medium confidence (interpretation).
+    """
     verdict = engine.evaluate(
         _item(
             reference_year=1910,
@@ -178,7 +198,7 @@ def test_upload_flag_ready_for_clean_public_domain_photo():
         current_year=2026,
     )
     assert verdict["status"] == engine.PUBLIC_DOMAIN
-    assert verdict["confidence"] == "high"
+    assert verdict["confidence"] == "medium"  # no-revival is an interpretation
     assert verdict["upload"]["flag"] == engine.UPLOAD_READY
     assert verdict["upload"]["reason"] == "In pubblico dominio, nessun vincolo: candidato per l'import manuale."
     assert "blockers_non_copyright" in verdict
@@ -196,12 +216,12 @@ def test_upload_flag_review_for_public_domain_with_blocker():
     )
     assert verdict["status"] == engine.PUBLIC_DOMAIN
     assert verdict["upload"]["flag"] == engine.UPLOAD_REVIEW
-    assert verdict["upload"]["reason"] == "In pubblico dominio ma con vincoli o confidenza bassa: rivedere prima."
+    assert verdict["upload"]["reason"].startswith("In pubblico dominio ma con vincoli o confidenza bassa: rivedere prima.")
     assert any("96-97" in blocker for blocker in verdict["blockers_non_copyright"])
 
 
 def test_upload_policy_strict_with_blocker():
-    """Strict policy: public_domain + high confidence + non-copyright blocker → review."""
+    """Strict policy: public_domain + medium confidence (no-revival) + non-copyright blocker → review."""
     verdict = engine.evaluate(
         _item(
             reference_year=1910,
@@ -211,14 +231,14 @@ def test_upload_policy_strict_with_blocker():
         upload_policy=engine.UPLOAD_POLICY_STRICT,
     )
     assert verdict["status"] == engine.PUBLIC_DOMAIN
-    assert verdict["confidence"] == "high"
+    assert verdict["confidence"] == "medium"  # no-revival is an interpretation
     assert verdict["upload"]["flag"] == engine.UPLOAD_REVIEW
     assert verdict["upload_policy"] == engine.UPLOAD_POLICY_STRICT
     assert any("96-97" in blocker for blocker in verdict["blockers_non_copyright"])
 
 
 def test_upload_policy_pd_only_with_blocker():
-    """pd-only policy: public_domain + high confidence + non-copyright blocker → ready."""
+    """pd-only policy: public_domain + medium confidence (no-revival) + non-copyright blocker → ready."""
     verdict = engine.evaluate(
         _item(
             reference_year=1910,
@@ -228,7 +248,7 @@ def test_upload_policy_pd_only_with_blocker():
         upload_policy=engine.UPLOAD_POLICY_PD_ONLY,
     )
     assert verdict["status"] == engine.PUBLIC_DOMAIN
-    assert verdict["confidence"] == "high"
+    assert verdict["confidence"] == "medium"  # no-revival is an interpretation
     assert verdict["upload"]["flag"] == engine.UPLOAD_READY
     assert verdict["upload_policy"] == engine.UPLOAD_POLICY_PD_ONLY
     assert "blockers_non_copyright" in verdict
@@ -273,15 +293,19 @@ def test_uncertain_verdict_emits_no_pd_template():
 
 
 def test_estimate_year_within_margin_returns_uncertain():
-    """When year_source is visual_estimate and expiry is within _ESTIMATE_MARGIN_YEARS (10),
-    the verdict must be uncertain, not public_domain.
-    
-    Boundary case: expiry lands exactly at the margin (pd_year - current_year == 10).
-    reference_year 1966 + 70 = pd_year 2036, current_year 2026
-    years_until_pd = 2036 - 2026 = 10 (exactly at the margin) -> uncertain
+    """A visual estimate whose OPERATIVE expiry lands within _ESTIMATE_MARGIN_YEARS (10)
+    of the current year must be uncertain.
+
+    For simple photos, production <= 2004 uses the 20-year no-revival term, so the
+    operative expiry is ref_year + 20. The only such years whose 20-year expiry falls
+    within +/-10 of 2026 are 1996..2004 (expiry 2016..2024). Post-2005 production uses
+    the 70-year term whose earliest expiry, 2075, is always outside the margin, so the
+    margin can only ever fire on the 20-year side for simple photographs.
+
+    Boundary case: reference_year 1996 + 20 = 2016, current_year 2026 -> exactly 10.
     """
     verdict = engine.evaluate(
-        _item(reference_year=1966, year_source="visual_estimate", has_identifiable_people=False),
+        _item(reference_year=1996, year_source="visual_estimate", has_identifiable_people=False),
         current_year=2026,
     )
     assert verdict["status"] == engine.UNCERTAIN, (
@@ -290,19 +314,33 @@ def test_estimate_year_within_margin_returns_uncertain():
     assert "stimato visivamente" in verdict["reason"].lower() or "stima" in verdict["reason"].lower()
 
 
+def test_estimate_year_post_2004_keeps_seventy_year_term():
+    """A visual estimate for production >= 2005 keeps the 70-year term. Its expiry is
+    far beyond the margin, so the margin guard does not fire and the verdict stays
+    not-PD, exactly as for a read year of the same production date.
+    """
+    verdict = engine.evaluate(
+        _item(reference_year=2015, year_source="visual_estimate", has_identifiable_people=False),
+        current_year=2026,
+    )
+    assert verdict["status"] == engine.NOT_PUBLIC_DOMAIN
+    assert verdict["pd_year"] == 2015 + 70
+
+
 def test_estimate_year_outside_margin_stays_public_domain():
     """When year_source is visual_estimate but expiry is clearly outside the margin,
     the verdict remains public_domain.
     
-    reference_year 1910 + 70 = pd_year 1980, current_year 2026
-    pd_year - current_year = 1980 - 2026 = -46 (well outside the 10-year margin)
+    Pre-2005 photos use 20-year no-revival term:
+    reference_year 1910 + 20 = pd_year 1930, current_year 2026
+    pd_year - current_year = 1930 - 2026 = -96 (well outside the 10-year margin)
     """
     verdict = engine.evaluate(
         _item(reference_year=1910, year_source="visual_estimate", has_identifiable_people=False),
         current_year=2026,
     )
     assert verdict["status"] == engine.PUBLIC_DOMAIN
-    assert verdict["pd_year"] == 1980
+    assert verdict["pd_year"] == 1930  # 20-year term, not 70
 
 
 def test_estimate_year_shows_stimata_in_reason():
@@ -322,13 +360,16 @@ def test_estimate_year_shows_stimata_in_reason():
 def test_real_year_returns_public_domain_without_stimata():
     """When year_source is a real date (not visual_estimate), the verdict
     returns public_domain without 'stimata' in the reason.
+    
+    Pre-2005 photos use 20-year no-revival term:
+    reference_year 1910 + 20 = pd_year 1930
     """
     verdict = engine.evaluate(
         _item(reference_year=1910, year_source="document", has_identifiable_people=False),
         current_year=2026,
     )
     assert verdict["status"] == engine.PUBLIC_DOMAIN
-    assert verdict["pd_year"] == 1980
+    assert verdict["pd_year"] == 1930  # 20-year term
     # Check that the reason does NOT mention estimation
     reason_lower = verdict["reason"].lower()
     assert "stimato" not in reason_lower and "stimata" not in reason_lower
@@ -381,21 +422,67 @@ def test_author_printing_work_not_used_for_art25():
         )
 
 
-def test_estimate_year_expiry_one_year_ago_returns_uncertain():
-    """A visual estimate whose expiry was 1 year ago must be uncertain (within margin)."""
-    # pd_year = 2025, current_year = 2026, years_until_pd = -1 (within margin of 10)
+def test_estimate_year_recently_expired_returns_uncertain():
+    """A visual estimate whose operative (20-year) expiry is recent must be uncertain.
+
+    Pre-2005 production uses the 20-year no-revival term. The latest possible such
+    expiry is 2004 + 20 = 2024, two years before 2026, i.e. inside the +/-10 margin.
+    """
     facts = _item(
-        reference_year=1955,  # 1955 + 70 = 2025
+        reference_year=2004,
         year_source="visual_estimate",
         is_anonymous=False,
     )
     verdict = engine.evaluate(facts, current_year=2026)
     assert verdict["status"] == engine.UNCERTAIN, (
-        f"Expected uncertain for estimate expiring 1 year ago, got {verdict['status']}"
+        f"Expected uncertain for 2004 estimate (20y expiry 2024 within margin), got {verdict['status']}"
     )
     assert "stimato visivamente" in verdict["reason"], (
         f"Expected 'stimato visivamente' in reason, got: {verdict['reason']}"
     )
+
+
+def test_simple_estimate_1955_reaches_no_revival_public_domain():
+    """An estimated pre-2005 simple photo is judged under the OPERATIVE 20-year
+    no-revival term, not the 70-year term. The 20-year expiry is far outside the
+    estimate margin, so the verdict is public domain with medium confidence: the
+    estimate costs confidence but does not change the PD status.
+    """
+    facts = {
+        "document_type": "postcard", "photo_classification": "simple",
+        "country_of_origin": "IT", "is_anonymous": True,
+        "has_identifiable_people": False, "has_handwriting": None,
+        "visible_text": "testo stampato leggibile", "vlm_confidence": "medium",
+        "reference_year": 1955, "year_source": "visual_estimate",
+    }
+    verdict = engine.evaluate(facts, current_year=2026)
+    assert verdict["status"] == engine.PUBLIC_DOMAIN
+    assert verdict["confidence"] == "medium"
+    assert verdict["pd_year"] == 1955 + 20  # operative 20-year term, not 1955 + 70
+    assert "{{PD-Italy}}" in verdict["commons_templates"]
+    assert "{{PD-1996}}" in verdict["commons_templates"]
+    reason = verdict["reason"]
+    assert "stimato" in reason.lower()
+    assert "20 anni" in reason
+    assert any("non-riattivazione" in note for note in verdict["notes"])
+    assert any("stimato" in note.lower() for note in verdict["notes"])
+
+
+def test_artistic_anon_estimated_1933_unchanged():
+    """A non-simple (artistic, anonymous) estimated photo keeps today's verdict shape:
+    it does not enter the simple-photo 20-year no-revival branch.
+    """
+    facts = {
+        "document_type": "postcard", "photo_classification": "artistic",
+        "country_of_origin": "IT", "is_anonymous": True,
+        "has_identifiable_people": False, "visible_text": "testo", "vlm_confidence": "high",
+        "reference_year": 1933, "year_source": "visual_estimate",
+    }
+    verdict = engine.evaluate(facts, current_year=2026)
+    assert verdict["status"] == engine.PUBLIC_DOMAIN
+    assert verdict["pd_year"] == 2004  # Art. 27, publication year + 70 + year-end
+    assert verdict["confidence"] == "low"  # visual-estimate cap still applies here
+    assert "{{PD-anon-70-EU}}" in verdict["commons_templates"]
 
 
 def test_estimate_year_expiry_21_years_ago_stays_public_domain():
@@ -731,6 +818,9 @@ def test_no_text_low_confidence_becomes_uncertain():
 def test_no_text_high_confidence_stays_public_domain():
     """When both text fields are empty BUT vlm_confidence is high, the no-evidence guard
     should NOT trigger — the year may be from another source (e.g., metadata).
+    
+    Pre-2005 photos use 20-year no-revival term:
+    reference_year 1910 + 20 = pd_year 1930
     """
     facts = _item(
         reference_year=1910,
@@ -743,7 +833,7 @@ def test_no_text_high_confidence_stays_public_domain():
     verdict = engine.evaluate(facts, current_year=2026)
     # With high confidence, the no-evidence guard does not apply
     assert verdict["status"] == engine.PUBLIC_DOMAIN
-    assert verdict["pd_year"] == 1980
+    assert verdict["pd_year"] == 1930  # 20-year term
 
 
 def test_real_text_low_confidence_can_still_be_pd():
@@ -978,15 +1068,22 @@ def test_author_role_absent_no_marker_emits_p170():
 
 def test_folder_context_year_near_boundary_returns_uncertain():
     """A year backfilled from the folder context cannot decide a boundary:
-    when its expiry falls within the estimate margin the verdict is uncertain."""
+    when its expiry falls within the estimate margin the verdict is uncertain.
+    
+    For pre-2005 photos (20y term), 1955 + 20 = 1975, far outside margin -> not uncertain.
+    To test the margin, use a year whose 20y expiry is within ±10 of 2026:
+    ref_year 2004 + 20 = 2024 (within margin: 2026 - 2024 = 2)
+    """
     facts = {"document_type": "photo", "photo_classification": "simple",
-             "reference_year": 1955, "year_source": "folder_context",
+             "reference_year": 2004, "year_source": "folder_context",  # 20y expiry 2024, within margin
              "country_of_origin": "IT", "is_anonymous": True,
              "has_identifiable_people": False,
              "visible_text": "some printed text, evidence present",
              "vlm_confidence": "high"}
     v = engine.evaluate(facts, current_year=2026)
-    assert v["status"] == engine.UNCERTAIN
+    assert v["status"] == engine.UNCERTAIN, (
+        f"Expected uncertain for 2004 folder_context (20y expiry 2024 within margin), got {v['status']}"
+    )
     assert "contesto della cartella" in (v.get("reason") or "")
 
 
@@ -1036,7 +1133,10 @@ def test_upload_policy_all_marks_uncertain_ready():
 
 
 def test_upload_policy_all_marks_pd_with_blockers_ready():
-    """all policy: public_domain items with blockers get flag='ready' but reason lists blockers."""
+    """all policy: public_domain items with blockers get flag='ready' but reason lists blockers.
+    
+    Pre-2005 photos use 20-year no-revival term -> medium confidence.
+    """
     verdict = engine.evaluate(
         _item(
             reference_year=1910,
@@ -1046,7 +1146,7 @@ def test_upload_policy_all_marks_pd_with_blockers_ready():
         upload_policy=engine.UPLOAD_POLICY_ALL,
     )
     assert verdict["status"] == engine.PUBLIC_DOMAIN
-    assert verdict["confidence"] == "high"
+    assert verdict["confidence"] == "medium"  # no-revival is an interpretation
     assert verdict["upload"]["flag"] == engine.UPLOAD_READY
     assert verdict["upload_policy"] == engine.UPLOAD_POLICY_ALL
     # Reason must list the blockers

@@ -44,7 +44,9 @@ def test_gb_anonymous_photo_1910_is_public_domain():
 
 
 def test_italy_anonymous_artistic_photo_uses_anon_70_eu_not_pd_italy():
-    """Italian anonymous ARTISTIC photo: PD-anon-70-EU (not PD-Italy simple-photo tag) + PD-1996."""
+    """Italian anonymous ARTISTIC photo: PD-anon-70-EU (not PD-Italy simple-photo tag).
+    URAA: {{PD-1996}} only if pd_year <= 1996. For 1950 work, pd_year=2020 > 1996,
+    so PD-1996 is NOT attached and URAA note is added."""
     verdict = engine.evaluate(
         _facts(photo_classification="artistic", is_anonymous=True, reference_year=1950),
         current_year=2026,
@@ -52,7 +54,11 @@ def test_italy_anonymous_artistic_photo_uses_anon_70_eu_not_pd_italy():
     origin = verdict["jurisdictions"]["origin"]
     assert origin["status"] == engine.PUBLIC_DOMAIN
     assert "{{PD-anon-70-EU}}" in origin["commons_templates"]
-    assert "{{PD-1996}}" in origin["commons_templates"]
+    # URAA: pd_year=2020 > 1996, so PD-1996 should NOT be present
+    assert "{{PD-1996}}" not in origin["commons_templates"]
+    # URAA note should be present in the notes
+    notes = origin.get("notes", [])
+    assert any("URAA" in note for note in notes), f"Expected URAA note in {notes}"
     # PD-Italy is the simple-photo tag, should NOT be present for artistic works
     assert "{{PD-Italy}}" not in origin["commons_templates"]
     # Verify all emitted templates are catalog-valid
@@ -163,7 +169,9 @@ def test_vatican_falls_back_to_italian_law():
         current_year=2026,
     )
     origin = verdict["jurisdictions"]["origin"]
-    assert origin["pd_year"] == 1980
+    # Simple photo <=2004: operative 20-year no-revival term (1910 + 20), not the
+    # post-reform 70-year term (1910 + 70).
+    assert origin["pd_year"] == 1930
     assert any("CXCVII" in basis for basis in origin["legal_basis"])
 
 

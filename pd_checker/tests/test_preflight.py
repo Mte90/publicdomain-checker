@@ -423,5 +423,153 @@ class TestNetworkErrorHandling:
         assert result == {}
 
 
+class TestNoLicensePreflight:
+    """Tests for no-license check in preflight."""
+    
+    @pytest.fixture
+    def mock_folder(self, tmp_path):
+        """Mock folder for preflight tests."""
+        folder = tmp_path / "test_preflight"
+        folder.mkdir()
+        img = folder / "test.png"
+        img.write_bytes(b"test")
+        return folder
+    
+    def test_preflight_blocked_no_license(self, mock_folder):
+        """Preflight blocks items without license templates."""
+        # Create item with no license templates
+        item = {
+            "file": "test.png",
+            "images": ["test.png"],
+            "commons_templates": [],  # No license template
+            "commons_categories": ["Test category"],
+            "information": {
+                "description": "Test",
+                "date": "1920",
+                "source": "{{Self-scanned}}",
+                "author": "Unknown"
+            },
+            "upload": {"flag": "ready", "reason": []},
+            "template_unknown": [],
+            "entity_unknown": [],
+            "category_unknown": []
+        }
+        
+        result = validate_item(
+            item,
+            mock_folder,
+            offline=True,
+            template_unknown=[],
+            cat_cache_lookup=lambda x: "exists",
+            wd_entities_unknown=[],
+            commons_duplicates={}
+        )
+        
+        assert result["ready"] is False
+        assert any("nessun tag di licenza" in r for r in result["reasons"])
+        assert any("Commons cancellerebbe il file" in r for r in result["reasons"])
+    
+    def test_preflight_blocked_no_source(self, mock_folder):
+        """Preflight blocks items with source 'non specificato'."""
+        # Create item with valid license but invalid source
+        item = {
+            "file": "test.png",
+            "images": ["test.png"],
+            "commons_templates": ["{{PD-Italy}}"],  # Has license
+            "commons_categories": ["Test category"],
+            "information": {
+                "description": "Test",
+                "date": "1920",
+                "source": "non specificato",  # Invalid source
+                "author": "Unknown"
+            },
+            "upload": {"flag": "ready", "reason": []},
+            "template_unknown": [],
+            "category_unknown": [],
+            "entity_unknown": []
+        }
+        
+        result = validate_item(
+            item,
+            mock_folder,
+            offline=True,
+            template_unknown=[],
+            cat_cache_lookup=lambda x: "exists",
+            wd_entities_unknown=[],
+            commons_duplicates={}
+        )
+        
+        assert result["ready"] is False
+        assert any("fonte non dichiarata" in r for r in result["reasons"])
+        assert any("Commons segnerebbe il file" in r for r in result["reasons"])
+    
+    def test_preflight_blocked_no_categories(self, mock_folder):
+        """Preflight blocks items with no categories."""
+        # Create item with valid license and source but no categories
+        item = {
+            "file": "test.png",
+            "images": ["test.png"],
+            "commons_templates": ["{{PD-Italy}}"],  # Has license
+            "commons_categories": [],  # No categories
+            "information": {
+                "description": "Test",
+                "date": "1920",
+                "source": "Scansione dalla collezione di Daniele Scasciafratte",
+                "author": "Unknown"
+            },
+            "upload": {"flag": "ready", "reason": []},
+            "template_unknown": [],
+            "category_unknown": [],
+            "entity_unknown": []
+        }
+        
+        result = validate_item(
+            item,
+            mock_folder,
+            offline=True,
+            template_unknown=[],
+            cat_cache_lookup=lambda x: "exists",
+            wd_entities_unknown=[],
+            commons_duplicates={}
+        )
+        
+        assert result["ready"] is False
+        assert any("nessuna categoria" in r for r in result["reasons"])
+        assert any("Commons segnala i file non categorizzati" in r for r in result["reasons"])
+    
+    def test_preflight_valid_item(self, mock_folder):
+        """Preflight accepts fully valid items."""
+        # Create item with all requirements met
+        item = {
+            "file": "test.png",
+            "images": ["test.png"],
+            "commons_templates": ["{{PD-Italy}}"],  # Has license
+            "commons_categories": ["Test category"],
+            "information": {
+                "description": "Test",
+                "date": "1920",
+                "source": "Scansione dalla collezione di Daniele Scasciafratte",
+                "author": "Unknown"
+            },
+            "upload": {"flag": "ready", "reason": []},
+            "template_unknown": [],
+            "category_unknown": [],
+            "entity_unknown": []
+        }
+        
+        result = validate_item(
+            item,
+            mock_folder,
+            offline=True,
+            template_unknown=[],
+            cat_cache_lookup=lambda x: "exists",
+            wd_entities_unknown=[],
+            commons_duplicates={}
+        )
+        
+        assert result["ready"] is True
+        assert result["reasons"] == ["OK"]
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

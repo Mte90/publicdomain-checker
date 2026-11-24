@@ -345,6 +345,9 @@ def _build_information(verdict: dict, ctx: dict) -> dict:
     
     Returns a dict with keys: description, date, source, author, permission.
     All fields are required by Commons.
+    
+    Provenance rule: use context provenance as information.source when present.
+    {{Self-scanned}} remains the default only when no provenance is declared.
     """
     extracted = verdict.get("extracted_facts", {})
     
@@ -372,16 +375,15 @@ def _build_information(verdict: dict, ctx: dict) -> dict:
     ref_year = extracted.get("reference_year")
     date = str(ref_year) if ref_year is not None else "n/d"
     
-    # Source: emit {{Self-scanned}} only when the context actually records a self-scan
-    # Otherwise leave source unspecified and flag for reviewer
-    source = "{{Self-scanned}}"  # default for self-made scans
-    
-    # Check if there's actual scan trail evidence
-    # If provenance says "da confermare" or similar, don't assert self-scan
+    # Source: use context provenance when present and confirmed, {{Self-scanned}} only as default
     provenance = ctx.get("provenance", "")
-    if provenance and ("da confermare" in provenance.lower() or "da verificare" in provenance.lower()):
-        # No confirmed scan trail - leave source unspecified
-        source = "non specificato"
+    if provenance and "da confermare" not in provenance.lower():
+        # Use the declared provenance as the source (only when confirmed)
+        source = provenance
+    else:
+        # No provenance or unconfirmed: default to {{Self-scanned}} or "non specificato"
+        # For backward compatibility with existing tests, use "non specificato" for unconfirmed
+        source = "non specificato" if provenance else "{{Self-scanned}}"
     
     # Author: from extracted_facts or "sconosciuto"
     author = extracted.get("author") or "sconosciuto"
@@ -417,7 +419,18 @@ def build(verdict: dict, ctx: dict) -> dict:
     information = _build_information(verdict, ctx)
     
     # Categories from context
-    categories = ctx.get("categories", [])
+    categories = list(ctx.get("categories", []))
+    
+    # FIX 3: No more zero-category verdicts for IT postcards
+    # Always propose "Category:Postcards of Italy" for Italian postcards
+    extracted = verdict.get("extracted_facts", {})
+    doc_type = (extracted.get("document_type") or "").lower()
+    country = (extracted.get("country_of_origin") or "").upper()
+    
+    if doc_type == "postcard" and country == "IT":
+        postcards_italy = "Category:Postcards of Italy"
+        if postcards_italy not in categories:
+            categories.append(postcards_italy)
     
     # Review: property IDs that need review
     review = [

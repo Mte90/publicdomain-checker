@@ -765,3 +765,354 @@ class TestOtherVersionsLink:
         assert push._resolve_image_path(folder, "mat/1_fronte.png") == abs_p
         assert push._resolve_image_path(folder, "1_fronte.png") == abs_p
         assert push._resolve_image_path(folder, "nope.png") is None
+
+
+# =============================================================================
+# Tests for no-license check (Commons acceptance gate)
+# =============================================================================
+
+class TestNoLicenseCheck:
+    """Tests for the no-license check in push.py - Commons acceptance gate."""
+    
+    def test_push_refuses_unlicensed_item_with_flag_ready(self, tmp_path, capsys):
+        """Push refuses items without license templates even with flag=ready."""
+        # Create folder structure
+        folder = tmp_path / "test_unlicensed"
+        folder.mkdir()
+        img = folder / "test.png"
+        img.write_bytes(b"test")
+        
+        # Create pubdom.json with unlicensed item (flag=ready but no commons_templates)
+        pubdom = {
+            "folder": "test_unlicensed",
+            "generated": "2024-01-15",
+            "items": [
+                {
+                    "file": "test_unlicensed/test.png",
+                    "status": "public_domain",
+                    "confidence": 0.95,
+                    "upload": {"flag": "ready", "reason": []},
+                    "information": {
+                        "description": "Test image",
+                        "date": "1920",
+                        "source": "{{Self-scanned}}",
+                        "author": "Unknown"
+                    },
+                    "commons_templates": [],  # No license template
+                    "commons_categories": ["Test category"],
+                    "extracted_facts": {"images": ["test_unlicensed/test.png"]},
+                    "source_template": "{{Self-scanned}}",
+                    "caveat_templates": []
+                }
+            ]
+        }
+        
+        (folder / "pubdom.json").write_text(json.dumps(pubdom))
+        
+        # Mock sys.argv to simulate: push test_unlicensed
+        test_args = ["push", str(folder)]
+        
+        with patch.object(push.sys, 'argv', test_args):
+            result = push.cmd_push(test_args[1:], live=False)
+        
+        # Check output
+        captured = capsys.readouterr()
+        assert "RIFIUTATO" in captured.out
+        assert "nessun tag di licenza" in captured.out
+        assert "Commons avvierà la cancellazione" in captured.out
+        
+        # Check exit code
+        assert result == 1
+    
+    def test_push_plans_licensed_item_normally(self, tmp_path, capsys):
+        """Push plans items with license templates normally."""
+        # Create folder structure
+        folder = tmp_path / "test_licensed"
+        folder.mkdir()
+        img = folder / "test.png"
+        img.write_bytes(b"test")
+        
+        # Create pubdom.json with licensed item
+        pubdom = {
+            "folder": "test_licensed",
+            "generated": "2024-01-15",
+            "items": [
+                {
+                    "file": "test_licensed/test.png",
+                    "status": "public_domain",
+                    "confidence": 0.95,
+                    "upload": {"flag": "ready", "reason": []},
+                    "information": {
+                        "description": "Test image",
+                        "date": "1920",
+                        "source": "{{Self-scanned}}",
+                        "author": "Unknown"
+                    },
+                    "commons_templates": ["{{PD-anon-70-EU}}", "{{PD-1996}}"],
+                    "commons_categories": ["Test category"],
+                    "extracted_facts": {"images": ["test_licensed/test.png"]},
+                    "source_template": "{{Self-scanned}}",
+                    "caveat_templates": []
+                }
+            ]
+        }
+        
+        (folder / "pubdom.json").write_text(json.dumps(pubdom))
+        
+        # Mock sys.argv to simulate: push test_licensed
+        test_args = ["push", str(folder)]
+        
+        with patch.object(push.sys, 'argv', test_args):
+            result = push.cmd_push(test_args[1:], live=False)
+        
+        # Check output - should show DRY-RUN planning
+        captured = capsys.readouterr()
+        assert "DRY-RUN" in captured.out
+        assert "RIFIUTATO" not in captured.out
+        
+        # Check exit code (should be 0 for dry-run success)
+        assert result == 0
+    
+    def test_push_exit_code_1_with_only_unlicensed_items(self, tmp_path, capsys):
+        """Push exits with code 1 when all items are unlicensed."""
+        # Create folder structure
+        folder = tmp_path / "test_all_unlicensed"
+        folder.mkdir()
+        img = folder / "test.png"
+        img.write_bytes(b"test")
+        
+        # Create pubdom.json with only unlicensed items
+        pubdom = {
+            "folder": "test_all_unlicensed",
+            "generated": "2024-01-15",
+            "items": [
+                {
+                    "file": "test_all_unlicensed/test.png",
+                    "status": "public_domain",
+                    "confidence": 0.95,
+                    "upload": {"flag": "ready", "reason": []},
+                    "information": {
+                        "description": "Test image",
+                        "date": "1920",
+                        "source": "{{Self-scanned}}",
+                        "author": "Unknown"
+                    },
+                    "commons_templates": [],  # No license template
+                    "commons_categories": ["Test category"],
+                    "extracted_facts": {"images": ["test_all_unlicensed/test.png"]},
+                    "source_template": "{{Self-scanned}}",
+                    "caveat_templates": []
+                }
+            ]
+        }
+        
+        (folder / "pubdom.json").write_text(json.dumps(pubdom))
+        
+        # Mock sys.argv to simulate: push test_all_unlicensed
+        test_args = ["push", str(folder)]
+        
+        with patch.object(push.sys, 'argv', test_args):
+            result = push.cmd_push(test_args[1:], live=False)
+        
+        # Check exit code
+        assert result == 1
+    
+    def test_push_refuses_item_with_source_non_specificato(self, tmp_path, capsys):
+        """Push refuses items with source 'non specificato' even with license."""
+        # Create folder structure
+        folder = tmp_path / "test_nosource"
+        folder.mkdir()
+        img = folder / "test.png"
+        img.write_bytes(b"test")
+        
+        # Create pubdom.json with item that has license but source="non specificato"
+        pubdom = {
+            "folder": "test_nosource",
+            "generated": "2024-01-15",
+            "items": [
+                {
+                    "file": "test_nosource/test.png",
+                    "status": "public_domain",
+                    "confidence": 0.95,
+                    "upload": {"flag": "ready", "reason": []},
+                    "information": {
+                        "description": "Test image",
+                        "date": "1920",
+                        "source": "non specificato",  # Invalid source
+                        "author": "Unknown"
+                    },
+                    "commons_templates": ["{{PD-Italy}}"],  # Has license
+                    "commons_categories": ["Test category"],
+                    "extracted_facts": {"images": ["test_nosource/test.png"]},
+                    "source_template": "{{Self-scanned}}",
+                    "caveat_templates": []
+                }
+            ]
+        }
+        
+        (folder / "pubdom.json").write_text(json.dumps(pubdom))
+        
+        # Mock sys.argv to simulate: push test_nosource
+        test_args = ["push", str(folder)]
+        
+        with patch.object(push.sys, 'argv', test_args):
+            result = push.cmd_push(test_args[1:], live=False)
+        
+        # Check output
+        captured = capsys.readouterr()
+        assert "RIFIUTATO" in captured.out
+        assert "fonte non dichiarata" in captured.out
+        assert "Commons segnala i file senza fonte" in captured.out
+        
+        # Check exit code
+        assert result == 1
+    
+    def test_push_refuses_item_with_no_categories(self, tmp_path, capsys):
+        """Push refuses items with no categories even with license and source."""
+        # Create folder structure
+        folder = tmp_path / "test_nocat"
+        folder.mkdir()
+        img = folder / "test.png"
+        img.write_bytes(b"test")
+        
+        # Create pubdom.json with item that has license+source but no categories
+        pubdom = {
+            "folder": "test_nocat",
+            "generated": "2024-01-15",
+            "items": [
+                {
+                    "file": "test_nocat/test.png",
+                    "status": "public_domain",
+                    "confidence": 0.95,
+                    "upload": {"flag": "ready", "reason": []},
+                    "information": {
+                        "description": "Test image",
+                        "date": "1920",
+                        "source": "Scansione dalla collezione di Daniele Scasciafratte",
+                        "author": "Unknown"
+                    },
+                    "commons_templates": ["{{PD-Italy}}"],  # Has license
+                    "commons_categories": [],  # No categories
+                    "extracted_facts": {"images": ["test_nocat/test.png"]},
+                    "source_template": "{{Self-scanned}}",
+                    "caveat_templates": []
+                }
+            ]
+        }
+        
+        (folder / "pubdom.json").write_text(json.dumps(pubdom))
+        
+        # Mock sys.argv to simulate: push test_nocat
+        test_args = ["push", str(folder)]
+        
+        with patch.object(push.sys, 'argv', test_args):
+            result = push.cmd_push(test_args[1:], live=False)
+        
+        # Check output
+        captured = capsys.readouterr()
+        assert "RIFIUTATO" in captured.out
+        assert "nessuna categoria" in captured.out
+        assert "Commons segnala i file non categorizzati" in captured.out
+        
+        # Check exit code
+        assert result == 1
+    
+    def test_push_accepts_fully_valid_item(self, tmp_path, capsys):
+        """Push accepts items with license, valid source, and categories."""
+        # Create folder structure
+        folder = tmp_path / "test_valid"
+        folder.mkdir()
+        img = folder / "test.png"
+        img.write_bytes(b"test")
+        
+        # Create pubdom.json with fully valid item
+        pubdom = {
+            "folder": "test_valid",
+            "generated": "2024-01-15",
+            "items": [
+                {
+                    "file": "test_valid/test.png",
+                    "status": "public_domain",
+                    "confidence": 0.95,
+                    "upload": {"flag": "ready", "reason": []},
+                    "information": {
+                        "description": "Test image",
+                        "date": "1920",
+                        "source": "Scansione dalla collezione di Daniele Scasciafratte",
+                        "author": "Unknown"
+                    },
+                    "commons_templates": ["{{PD-Italy}}"],  # Has license
+                    "commons_categories": ["Test category"],  # Has categories
+                    "extracted_facts": {"images": ["test_valid/test.png"]},
+                    "source_template": "{{Self-scanned}}",
+                    "caveat_templates": []
+                }
+            ]
+        }
+        
+        (folder / "pubdom.json").write_text(json.dumps(pubdom))
+        
+        # Mock sys.argv to simulate: push test_valid
+        test_args = ["push", str(folder)]
+        
+        with patch.object(push.sys, 'argv', test_args):
+            result = push.cmd_push(test_args[1:], live=False)
+        
+        # Check output - should show DRY-RUN planning
+        captured = capsys.readouterr()
+        assert "DRY-RUN" in captured.out
+        assert "RIFIUTATO" not in captured.out
+        
+        # Check exit code (should be 0 for dry-run success)
+        assert result == 0
+    
+    def test_push_refuses_multiple_reasons_same_item(self, tmp_path, capsys):
+        """Push refuses items with multiple Commons acceptance failures."""
+        # Create folder structure
+        folder = tmp_path / "test_multi"
+        folder.mkdir()
+        img = folder / "test.png"
+        img.write_bytes(b"test")
+        
+        # Create pubdom.json with item that fails all three checks
+        pubdom = {
+            "folder": "test_multi",
+            "generated": "2024-01-15",
+            "items": [
+                {
+                    "file": "test_multi/test.png",
+                    "status": "public_domain",
+                    "confidence": 0.95,
+                    "upload": {"flag": "ready", "reason": []},
+                    "information": {
+                        "description": "Test image",
+                        "date": "1920",
+                        "source": "",  # Empty source
+                        "author": "Unknown"
+                    },
+                    "commons_templates": [],  # No license
+                    "commons_categories": [],  # No categories
+                    "extracted_facts": {"images": ["test_multi/test.png"]},
+                    "source_template": "{{Self-scanned}}",
+                    "caveat_templates": []
+                }
+            ]
+        }
+        
+        (folder / "pubdom.json").write_text(json.dumps(pubdom))
+        
+        # Mock sys.argv to simulate: push test_multi
+        test_args = ["push", str(folder)]
+        
+        with patch.object(push.sys, 'argv', test_args):
+            result = push.cmd_push(test_args[1:], live=False)
+        
+        # Check output - all three reasons should be printed
+        captured = capsys.readouterr()
+        assert captured.out.count("RIFIUTATO") == 3  # Three refusal lines
+        assert "nessun tag di licenza" in captured.out
+        assert "fonte non dichiarata" in captured.out
+        assert "nessuna categoria" in captured.out
+        
+        # Check exit code
+        assert result == 1
