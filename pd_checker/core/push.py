@@ -85,12 +85,14 @@ def validate_credentials(credentials: dict[str, str | None], live: bool) -> tupl
 # Wikitext assembler
 # =============================================================================
 
-def build_wikitext(item: dict) -> str:
-    """Build Commons description page wikitext from item package.
+def build_wikitext(item: dict, other_versions: str | None = None) -> str:
+    """Build Commons description page wikitext from an item package.
     
     Args:
         item: Item dict with 'information', 'commons_templates', 'commons_categories'
-        
+        other_versions: value for the |other_versions= field (the data link to the
+            retro side); omitted when the item has no retro side
+    
     Returns:
         Wikitext string for the file description page
     """
@@ -127,6 +129,8 @@ def build_wikitext(item: dict) -> str:
     lines.append(f" |source={source}")
     lines.append(f" |author={author_display}")
     lines.append(" |permission=")
+    if other_versions:
+        lines.append(f" |other_versions={other_versions}")
     lines.append("}}")
     lines.append("")
     
@@ -173,7 +177,7 @@ def derive_filename(item: dict, prefix: str, item_number: int) -> str:
         Filename string like "<prefix> - <n>.png"
     """
     # Get image extension from first image
-    images = item.get("images", [])
+    images = (item.get("extracted_facts") or {}).get("images", [])
     ext = ".png"  # default
     if images:
         first_image = images[0]
@@ -182,6 +186,25 @@ def derive_filename(item: dict, prefix: str, item_number: int) -> str:
             ext = ".png"
     
     return f"{prefix} - {item_number}{ext}"
+
+
+def _resolve_image_path(folder: Path, name: str) -> Path | None:
+    """Resolve an image reference to an existing path.
+
+    Image names arrive in different encodings depending on the pipeline
+    version: absolute paths, folder-prefixed ('Cardinale-Del-Val/1_fronte.png')
+    or bare filenames ('1_fronte.png'). All three must resolve.
+    """
+    p = Path(name)
+    if p.is_absolute():
+        return p if p.exists() else None
+    if (folder / p).exists():
+        return folder / p
+    if (folder / p.name).exists():
+        return folder / p.name
+    if p.exists():
+        return p
+    return None
 
 
 # =============================================================================
@@ -559,7 +582,7 @@ def cmd_push(argv: list[str], live: bool = False) -> int:
             return 1
         print(f"[push] CSRF token obtained", file=sys.stderr)
     
-    # Process items
+    # Process items - upload ALL images per item (front + back + any further sides)
     print(f"\n== Push: {folder.name} ==")
     print(f"Items pronti: {len(ready_items)}")
     print(f"Modalità: {'LIVE' if live else 'DRY-RUN'}")
@@ -568,93 +591,159 @@ def cmd_push(argv: list[str], live: bool = False) -> int:
     
     results = []
     
+    # For live mode: pre-check existing files in batches
+    if live:
+        # Collect all planned filenames for pre-check
+        planned_titles = []
+        for item_num, item in ready_items:
+            images = item.get("images") or []
+            if not images:
+                images = [item.get("file", "")] if item.get("file") else []
+            
+            for side_idx, img_path_str in enumerate(images):
+                # Derive filename for this side
+                if side_idx == 0:
+                    filename = derive_filename(item, prefix, item_num)
+                else:
+                    # Retro side: derive base name then add retro suffix
+                    base_filename = derive_filename(item, prefix, item_num)
+                    # Replace extension to add retro suffix
+                    stem = Path(base_filename).stem
+                    ext = Path(base_filename).suffix
+                    if side_idx == 1:
+                        filename = f"{stem} (retro){ext}"
+                    else:
+                        k = side_idx  # 2, 3, ...
+                        filename = f"{stem} (retro {k}){ext}"
+                
+                planned_titles.append(filename)
+        
+        # Pre-check all planned titles in ONE API query
+        if planned_titles:
+            existing_titles = _check_existing_files(opener, planned_titles, credentials)
+            print(f"[PRE-CHECK] {len(existing_titles)} file già esistenti su Commons")
+    
     for item_num, item in ready_items:
         file_path = item.get("file", "")
-        images = item.get("images") or []  # Handle None
+        facts = item.get("extracted_facts") or {}
+        image_names = facts.get("images") or []
         
-        # Use first image for upload, or fall back to file field
-        if not images:
-            # Try to use the file field as the image path
+        # Fallback: no images in the facts — probe the file field (and its retro twin)
+        if not image_names:
             if file_path:
-                # The file path is relative to project root, e.g. "Cardinale-Del-Val/1_fronte.png"
-                # folder is the material folder, e.g. Path("Cardinale-Del-Val")
-                # So we extract just the filename and check relative to folder
-                img_path = folder / Path(file_path).name
-                if img_path.exists():
-                    # Use the absolute path for the upload
-                    images = [str(img_path.absolute())]
-                else:
-                    print(f"[SKIP] {file_path}: image not found ({img_path})")
-                    results.append({"item": item_num, "status": "skip", "reason": "no images"})
-                    continue
-            else:
+                probe = folder / Path(file_path).name
+                if probe.exists():
+                    image_names = [str(probe.absolute())]
+                    stem = Path(file_path).stem
+                    suffix = Path(file_path).suffix
+                    retro_probe = folder / f"{stem.replace('_fronte', '_retro')}{suffix}"
+                    if retro_probe.exists():
+                        image_names.append(str(retro_probe.absolute()))
+            if not image_names:
                 print(f"[SKIP] {file_path}: no images")
                 results.append({"item": item_num, "status": "skip", "reason": "no images"})
                 continue
         
-        img_path = folder / images[0] if not images[0].startswith("/") else Path(images[0])
-        if not img_path.exists():
-            print(f"[SKIP] {file_path}: image not found ({images[0]})")
-            results.append({"item": item_num, "status": "skip", "reason": f"image not found"})
+        # Resolve every image to an existing path before planning anything
+        sides = []
+        for side_idx, name in enumerate(image_names):
+            img_path = _resolve_image_path(folder, name)
+            if img_path is None:
+                print(f"[SKIP] {file_path} (side {side_idx + 1}): image not found ({name})")
+            else:
+                sides.append((side_idx, img_path))
+        if not sides:
+            results.append({"item": item_num, "status": "skip", "reason": "image not found"})
             continue
         
-        # Derive filename
-        filename = derive_filename(item, prefix, item_num)
-        
-        # Build wikitext
-        wikitext = build_wikitext(item)
-        
-        # Upload comment
-        comment = f"Upload da pd-checker (item {item_num})"
-        
-        if live:
-            # Perform upload
-            print(f"[UPLOAD] {filename}...")
-            success, response = upload_file(
-                opener, img_path, filename, wikitext, comment, csrf_token, credentials
-            )
-            
-            if success:
-                print(f"  OK: {filename}")
-                results.append({"item": item_num, "status": "success", "filename": filename})
+        # Plan side filenames first: the wikitext of each side must link to the others
+        front_filename = derive_filename(item, prefix, item_num)
+        front_stem = Path(front_filename).stem
+        ext = Path(front_filename).suffix
+        planned = []
+        for side_idx, img_path in sides:
+            if side_idx == 0:
+                planned.append((side_idx, img_path, front_filename))
+            elif side_idx == 1:
+                planned.append((side_idx, img_path, f"{front_stem} (retro){ext}"))
             else:
-                # Check for warnings (exists/duplicate)
-                warnings = response.get("warnings", {})
-                if warnings:
-                    # Extract warning type
-                    warning_types = list(warnings.keys())
-                    print(f"  WARNING: {', '.join(warning_types)} - NOT overwritten")
-                    results.append({
-                        "item": item_num,
-                        "status": "warning",
-                        "filename": filename,
-                        "warnings": warning_types
-                    })
+                planned.append((side_idx, img_path, f"{front_stem} (retro {side_idx}){ext}"))
+        
+        # Bidirectional data link (|other_versions=): front<->retro
+        front_other = None
+        if len(planned) > 1:
+            front_other = f"Retro: [[:File:{planned[1][2]}|{planned[1][2]}]]"
+        main_wikitext = build_wikitext(item, other_versions=front_other)
+        
+        # Build wikitext for the main/retro files (with the data link to the front)
+        for side_idx, img_path, filename in planned:
+            if side_idx == 0:
+                wikitext = main_wikitext
+            else:
+                wikitext = build_retro_wikitext(
+                    item, front_filename,
+                    other_versions=f"Fronte: [[:File:{front_filename}|{front_filename}]]",
+                )
+            
+            # Upload comment
+            comment = f"Upload da pd-checker (item {item_num}, side {side_idx + 1})"
+            
+            # Check if file already exists (live mode only)
+            if live and planned_titles:
+                if filename in existing_titles:
+                    print(f"[SKIP] {filename}: già presente su Commons — non toccato")
+                    results.append({"item": item_num, "status": "exists", "filename": filename})
+                    continue
+            
+            if live:
+                # Perform upload
+                print(f"[UPLOAD] {filename}...")
+                success, response = upload_file(
+                    opener, img_path, filename, wikitext, comment, csrf_token, credentials
+                )
+                
+                if success:
+                    print(f"  OK: {filename}")
+                    results.append({"item": item_num, "status": "success", "filename": filename, "side": side_idx + 1})
                 else:
-                    error = response.get("error", "unknown error")
-                    print(f"  FAILED: {error}")
-                    results.append({"item": item_num, "status": "failed", "error": str(error)})
-            
-            # Small sleep between uploads
-            time.sleep(0.5)
-            
-            # Check for rate limiting
-            if handle_rate_limit(response):
-                retry_after = get_retry_after(response)
-                print(f"[RATE LIMIT] Waiting {retry_after}s...")
-                time.sleep(retry_after)
-        else:
-            # Dry-run: print plan
-            print(f"[DRY-RUN] {filename}")
-            print(f"  File: {img_path}")
-            print(f"  Wikitext:")
-            for line in wikitext.split("\n")[:10]:
-                print(f"    {line}")
-            if len(wikitext.split("\n")) > 10:
-                print(f"    ... ({len(wikitext.split(chr(10))) - 10} more lines)")
-            print(f"  Comment: {comment}")
-            print()
-            results.append({"item": item_num, "status": "dry-run", "filename": filename})
+                    # Check for warnings (exists/duplicate)
+                    warnings = response.get("warnings", {})
+                    if warnings:
+                        # Extract warning type
+                        warning_types = list(warnings.keys())
+                        print(f"  WARNING: {', '.join(warning_types)} - NOT overwritten")
+                        results.append({
+                            "item": item_num,
+                            "status": "warning",
+                            "filename": filename,
+                            "warnings": warning_types,
+                            "side": side_idx + 1
+                        })
+                    else:
+                        error = response.get("error", "unknown error")
+                        print(f"  FAILED: {error}")
+                        results.append({"item": item_num, "status": "failed", "error": str(error), "side": side_idx + 1})
+                
+                # Small sleep between uploads
+                time.sleep(0.5)
+                
+                # Check for rate limiting
+                if handle_rate_limit(response):
+                    retry_after = get_retry_after(response)
+                    print(f"[RATE LIMIT] Waiting {retry_after}s...")
+                    time.sleep(retry_after)
+            else:
+                # Dry-run: print plan
+                print(f"[DRY-RUN] {filename}")
+                print(f"  File: {img_path}")
+                print(f"  Wikitext:")
+                for line in wikitext.split("\n")[:10]:
+                    print(f"    {line}")
+                if len(wikitext.split("\n")) > 10:
+                    print(f"    ... ({len(wikitext.split(chr(10))) - 10} more lines)")
+                print(f"  Comment: {comment}")
+                print()
+                results.append({"item": item_num, "status": "dry-run", "filename": filename, "side": side_idx + 1})
     
     # Summary
     print("\n== Summary ==")
@@ -662,17 +751,151 @@ def cmd_push(argv: list[str], live: bool = False) -> int:
     warning_count = sum(1 for r in results if r["status"] == "warning")
     failed_count = sum(1 for r in results if r["status"] == "failed")
     skip_count = sum(1 for r in results if r["status"] == "skip")
+    exists_count = sum(1 for r in results if r["status"] == "exists")
     dry_run_count = sum(1 for r in results if r["status"] == "dry-run")
     
     if live:
         print(f"Success:   {success_count}")
         print(f"Warnings:  {warning_count} (NOT overwritten)")
+        print(f"Exists:    {exists_count} (pre-checked, skipped)")
         print(f"Failed:    {failed_count}")
         print(f"Skipped:   {skip_count}")
     else:
-        print(f"Dry-run:   {dry_run_count} items planned")
+        print(f"Dry-run:   {dry_run_count} files planned")
     
     # Return non-zero if any failures in live mode
     if live and (failed_count > 0 or warning_count > 0):
         return 1
     return 0
+
+
+def _check_existing_files(opener: urllib.request.OpenerDirector, titles: list[str], credentials: dict[str, str | None]) -> set[str]:
+    """Check which files already exist on Commons (batch query).
+    
+    Args:
+        opener: Opener with cookie jar
+        titles: List of filenames to check (without 'File:' prefix)
+        credentials: Dict with 'contact'
+        
+    Returns:
+        Set of titles that already exist
+    """
+    if not titles:
+        return set()
+    
+    base_url = "https://commons.wikimedia.org/w/api.php"
+    
+    # Batch all titles in ONE query
+    # MediaWiki API has a limit on batch size; chunk if needed
+    BATCH_SIZE = 50
+    existing = set()
+    
+    for i in range(0, len(titles), BATCH_SIZE):
+        batch = titles[i:i + BATCH_SIZE]
+        titles_param = "|".join(f"File:{t}" for t in batch)
+        
+        params = {
+            "action": "query",
+            "prop": "imageinfo",
+            "iiprop": "sha1",
+            "titles": titles_param,
+            "format": "json",
+        }
+        url = f"{base_url}?{urllib.parse.urlencode(params)}"
+        
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": credentials["contact"]})
+            with opener.open(req, timeout=30) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+        except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError, TimeoutError) as e:
+            print(f"[PRE-CHECK WARNING] Query failed: {e}")
+            continue
+        
+        # Extract existing pages
+        pages = data.get("query", {}).get("pages", {})
+        for page_id, page_data in pages.items():
+            if page_id != "-1":  # -1 means page doesn't exist
+                title = page_data.get("title", "")
+                if title.startswith("File:"):
+                    existing.add(title[5:])  # Remove "File:" prefix
+    
+    return existing
+
+
+def build_retro_wikitext(item: dict, main_filename: str, other_versions: str | None = None) -> str:
+    """Build wikitext for a retro (back/further side) file.
+    
+    Args:
+        item: Item dict with 'information', 'commons_templates', 'commons_categories'
+        main_filename: The main file's filename (for the backlink)
+        other_versions: value for the |other_versions= field (the data link to
+            the front side)
+        
+    Returns:
+        Wikitext string for the retro file description page
+    """
+    lines = []
+    
+    # {{Information}} template with retro description
+    info = item.get("information", {})
+    date = info.get("date", "")
+    source = info.get("source", "{{Self-scanned}}")
+    author = info.get("author", "")
+    author_role = item.get("extracted_facts", {}).get("author_role", "")
+    publisher = item.get("extracted_facts", {}).get("publisher", "")
+    
+    # Handle author: same logic as build_wikitext
+    author_from_info = info.get("author", "")
+    if author_role in ("printer", "publisher") or any(
+        marker in (author_from_info or "").lower()
+        for marker in ["stab.", "tipografia", "arti grafiche", "stamperia", "editore"]
+    ):
+        author_display = "{{unknown|author}}"
+        # Put imprint in source or description
+        if publisher:
+            source = f"{source} (imprint: {publisher})"
+        elif author_from_info:
+            source = f"{source} (imprint: {author_from_info})"
+    else:
+        author_display = author_from_info if author_from_info else "{{unknown|author}}"
+    
+    # Build retro description
+    retro_description = f"Retro della cartolina [[:File:{main_filename}|{main_filename}]]"
+    
+    # Build Information template
+    lines.append("{{Information")
+    lines.append(f" |description={retro_description}")
+    lines.append(f" |date={date if date else 'n/d'}")
+    lines.append(f" |source={source}")
+    lines.append(f" |author={author_display}")
+    lines.append(" |permission=")
+    if other_versions:
+        lines.append(f" |other_versions={other_versions}")
+    lines.append("}}")
+    lines.append("")
+    
+    # License templates (same as main file)
+    license_templates = item.get("commons_templates", [])
+    for template in license_templates:
+        lines.append(template)
+    if license_templates:
+        lines.append("")
+    
+    # Source template (same as main file)
+    source_template = item.get("source_template", "{{Self-scanned}}")
+    lines.append(source_template)
+    lines.append("")
+    
+    # Caveat templates (same as main file)
+    caveat_templates = item.get("caveat_templates", [])
+    for template in caveat_templates:
+        lines.append(template)
+    if caveat_templates:
+        lines.append("")
+    
+    # Categories (same as main file)
+    categories = item.get("commons_categories", [])
+    for cat in categories:
+        lines.append(f"[[{cat}]]")
+    
+    return "\n".join(lines)

@@ -26,7 +26,6 @@ def sample_item():
     """Sample item with real-shaped data from Cardinale-Del-Val/pubdom.json item 1."""
     return {
         "file": "Cardinale-Del-Val/001.jpg",
-        "images": ["Cardinale-Del-Val/001.jpg"],
         "status": "public_domain",
         "confidence": 0.95,
         "upload": {
@@ -49,7 +48,43 @@ def sample_item():
         ],
         "extracted_facts": {
             "author_role": "printer",
-            "publisher": "Stab. Sansaini"
+            "publisher": "Stab. Sansaini",
+            "images": ["Cardinale-Del-Val/001.jpg"]
+        },
+        "source_template": "{{Self-scanned}}",
+        "caveat_templates": []
+    }
+
+
+@pytest.fixture
+def sample_item_multi_image():
+    """Sample item with multiple images (front + back)."""
+    return {
+        "file": "Cardinale-Del-Val/003.jpg",
+        "status": "public_domain",
+        "confidence": 0.92,
+        "upload": {
+            "flag": "ready",
+            "reason": []
+        },
+        "information": {
+            "description": "Cartolina postale del Cardinale Del Val",
+            "date": "1908",
+            "source": "{{Self-scanned}}",
+            "author": "Unknown"
+        },
+        "commons_templates": [
+            "{{PD-Italy}}"
+        ],
+        "commons_categories": [
+            "Postcards of Italy",
+            "Cardinal Del Val"
+        ],
+        "extracted_facts": {
+            "images": [
+                "Cardinale-Del-Val/003_front.png",
+                "Cardinale-Del-Val/003_back.png"
+            ]
         },
         "source_template": "{{Self-scanned}}",
         "caveat_templates": []
@@ -68,27 +103,25 @@ def sample_pubdom(sample_item):
             sample_item,
             {
                 "file": "test/002.jpg",
-                "images": ["test/002.jpg"],
                 "status": "public_domain",
                 "confidence": 0.90,
                 "upload": {"flag": "review", "reason": ["template_unknown"]},
                 "information": {"description": "Test 2", "date": "1910", "source": "{{Self-scanned}}", "author": "Unknown"},
                 "commons_templates": ["{{PD-Italy}}"],
                 "commons_categories": ["Test category"],
-                "extracted_facts": {},
+                "extracted_facts": {"images": ["test/002.jpg"]},
                 "source_template": "{{Self-scanned}}",
                 "caveat_templates": []
             },
             {
                 "file": "test/003.jpg",
-                "images": ["test/003.jpg"],
                 "status": "public_domain",
                 "confidence": 0.88,
                 "upload": {"flag": "ready", "reason": []},
                 "information": {"description": "Test 3", "date": "1920", "source": "{{Self-scanned}}", "author": "Artist Name"},
                 "commons_templates": ["{{PD-Italy}}"],
                 "commons_categories": ["Another category"],
-                "extracted_facts": {"author_role": "photographer"},
+                "extracted_facts": {"author_role": "photographer", "images": ["test/003.jpg"]},
                 "source_template": "{{Self-scanned}}",
                 "caveat_templates": []
             }
@@ -108,7 +141,7 @@ def temp_folder(tmp_path, sample_pubdom):
     
     # Create dummy image files
     for item in sample_pubdom["items"]:
-        img_path = folder / item["images"][0]
+        img_path = folder / item["extracted_facts"]["images"][0]
         img_path.parent.mkdir(parents=True, exist_ok=True)
         img_path.write_bytes(b"\x89PNG\r\n\x1a\n" + b"dummy image data")  # Fake PNG header
     
@@ -266,7 +299,7 @@ class TestFilenameDerivation:
     
     def test_derive_filename_png_extension(self, sample_item):
         """PNG extension detection."""
-        sample_item["images"] = ["test.png"]
+        sample_item["extracted_facts"]["images"] = ["test.png"]
         filename = push.derive_filename(sample_item, "Prefix", 1)
         assert filename == "Prefix - 1.png"
 
@@ -339,7 +372,8 @@ class TestLiveMode:
         with patch.object(push, 'get_credentials') as mock_creds, \
              patch.object(push, 'create_opener') as mock_opener, \
              patch.object(push, 'get_csrf_token') as mock_csrf, \
-             patch.object(push, 'upload_file') as mock_upload:
+             patch.object(push, 'upload_file') as mock_upload, \
+             patch.object(push, '_check_existing_files') as mock_check:
             
             # Setup mocks
             mock_creds.return_value = {
@@ -351,6 +385,7 @@ class TestLiveMode:
             mock_opener.return_value = MagicMock()
             mock_csrf.return_value = ("csrf_token_123", "")
             mock_upload.return_value = (True, {"upload": {"result": "Success"}})
+            mock_check.return_value = set()  # No existing files
             
             result = push.cmd_push([str(temp_folder), "--live", "--filename-prefix", "Test"], live=True)
             
@@ -364,7 +399,8 @@ class TestLiveMode:
              patch.object(push, 'create_opener') as mock_opener, \
              patch.object(push, 'login_bot_password') as mock_login, \
              patch.object(push, 'get_csrf_token') as mock_csrf, \
-             patch.object(push, 'upload_file') as mock_upload:
+             patch.object(push, 'upload_file') as mock_upload, \
+             patch.object(push, '_check_existing_files') as mock_check:
             
             # Setup mocks
             mock_creds.return_value = {
@@ -377,6 +413,7 @@ class TestLiveMode:
             mock_login.return_value = (True, "Login riuscito")
             mock_csrf.return_value = ("csrf_token_123", "")
             mock_upload.return_value = (True, {"upload": {"result": "Success"}})
+            mock_check.return_value = set()  # No existing files
             
             result = push.cmd_push([str(temp_folder), "--live", "--filename-prefix", "Test"], live=True)
             
@@ -390,9 +427,11 @@ class TestLiveMode:
     def test_live_cookiejar_reused(self, temp_folder):
         """Cookiejar is reused for login + csrf + upload."""
         with patch.object(push, 'get_credentials') as mock_creds, \
+             patch.object(push, 'create_opener') as mock_opener, \
              patch.object(push, 'login_bot_password') as mock_login, \
              patch.object(push, 'get_csrf_token') as mock_csrf, \
-             patch.object(push, 'upload_file') as mock_upload:
+             patch.object(push, 'upload_file') as mock_upload, \
+             patch.object(push, '_check_existing_files') as mock_check:
             
             mock_creds.return_value = {
                 "oauth_token": None,
@@ -403,6 +442,7 @@ class TestLiveMode:
             mock_login.return_value = (True, "Login riuscito")
             mock_csrf.return_value = ("csrf_token_123", "")
             mock_upload.return_value = (True, {"upload": {"result": "Success"}})
+            mock_check.return_value = set()  # No existing files
             
             # Verify that create_opener is called with a CookieJar
             # The CookieJar is created inside cmd_push and passed to create_opener
@@ -417,7 +457,8 @@ class TestLiveMode:
         with patch.object(push, 'get_credentials') as mock_creds, \
              patch.object(push, 'create_opener') as mock_opener, \
              patch.object(push, 'get_csrf_token') as mock_csrf, \
-             patch.object(push, 'upload_file') as mock_upload:
+             patch.object(push, 'upload_file') as mock_upload, \
+             patch.object(push, '_check_existing_files') as mock_check:
             
             mock_creds.return_value = {
                 "oauth_token": "test_token",
@@ -427,6 +468,7 @@ class TestLiveMode:
             }
             mock_opener.return_value = MagicMock()
             mock_csrf.return_value = ("csrf_token_123", "")
+            mock_check.return_value = set()  # No existing files (pre-check)
             # Simulate exists warning
             mock_upload.return_value = (
                 False,
@@ -469,9 +511,9 @@ class TestSelection:
             "items": [
                 {
                     "file": "test.jpg",
-                    "images": ["test.jpg"],
                     "upload": {"flag": "review", "reason": ["needs_check"]},
-                    "information": {"description": "Test", "date": "2020", "source": "{{Self-scanned}}", "author": "Test"}
+                    "information": {"description": "Test", "date": "2020", "source": "{{Self-scanned}}", "author": "Test"},
+                    "extracted_facts": {"images": ["test.jpg"]}
                 }
             ]
         }
@@ -526,3 +568,200 @@ class TestRateLimit:
         """Returns default 30s when no retry-after."""
         response = {"error": {"code": "ratelimited"}}
         assert push.get_retry_after(response) == 30
+
+
+# =============================================================================
+# Multi-image upload tests
+# =============================================================================
+
+class TestMultiImageUpload:
+    """Tests for multi-image (front + back) upload."""
+    
+    def test_multi_image_plans_two_files(self, tmp_path, sample_item_multi_image):
+        """Multi-image item plans two files with correct names."""
+        folder = tmp_path / "test-multi"
+        folder.mkdir()
+        
+        pubdom = {
+            "folder": "test-multi",
+            "generated": "2024-01-15",
+            "rule_table_version": "1.0",
+            "current_year": 2024,
+            "items": [sample_item_multi_image]
+        }
+        
+        # Write pubdom.json
+        (folder / "pubdom.json").write_text(json.dumps(pubdom), encoding="utf-8")
+        
+        # Create dummy image files
+        (folder / "Cardinale-Del-Val").mkdir()
+        img1 = folder / "Cardinale-Del-Val/003_front.png"
+        img2 = folder / "Cardinale-Del-Val/003_back.png"
+        img1.write_bytes(b"\x89PNG\r\n\x1a\n" + b"dummy front")
+        img2.write_bytes(b"\x89PNG\r\n\x1a\n" + b"dummy back")
+        
+        result = push.cmd_push([str(folder), "--filename-prefix", "Merry Del Val"], live=False)
+        
+        assert result == 0
+        # Both files should be planned
+        # Front: "Merry Del Val - 1.png"
+        # Back: "Merry Del Val - 1 (retro).png"
+    
+    def test_retro_wikitext_contains_backlink(self, sample_item_multi_image):
+        """Retro wikitext contains 'Retro della cartolina' link to main file."""
+        main_filename = "Merry Del Val - 1.png"
+        wikitext = push.build_retro_wikitext(sample_item_multi_image, main_filename)
+        
+        assert "Retro della cartolina" in wikitext
+        assert f"[[:File:{main_filename}|{main_filename}]]" in wikitext
+    
+    def test_retro_wikitext_same_licence(self, sample_item_multi_image):
+        """Retro wikitext has same licence templates as main file."""
+        main_filename = "Merry Del Val - 1.png"
+        main_wikitext = push.build_wikitext(sample_item_multi_image)
+        retro_wikitext = push.build_retro_wikitext(sample_item_multi_image, main_filename)
+        
+        # Both should have PD-Italy
+        assert "{{PD-Italy}}" in main_wikitext
+        assert "{{PD-Italy}}" in retro_wikitext
+    
+    def test_retro_wikitext_same_categories(self, sample_item_multi_image):
+        """Retro wikitext has same categories as main file."""
+        main_filename = "Merry Del Val - 1.png"
+        retro_wikitext = push.build_retro_wikitext(sample_item_multi_image, main_filename)
+        
+        assert "[[Postcards of Italy]]" in retro_wikitext
+        assert "[[Cardinal Del Val]]" in retro_wikitext
+    
+    def test_precheck_skips_existing(self, tmp_path, sample_item_multi_image, monkeypatch):
+        """Pre-check skips existing file (fake API) and records exists without upload attempt."""
+        folder = tmp_path / "test-precheck"
+        folder.mkdir()
+        
+        pubdom = {
+            "folder": "test-precheck",
+            "generated": "2024-01-15",
+            "rule_table_version": "1.0",
+            "current_year": 2024,
+            "items": [sample_item_multi_image]
+        }
+        
+        # Write pubdom.json
+        (folder / "pubdom.json").write_text(json.dumps(pubdom), encoding="utf-8")
+        
+        # Create dummy image files
+        (folder / "Cardinale-Del-Val").mkdir()
+        img1 = folder / "Cardinale-Del-Val/003_front.png"
+        img2 = folder / "Cardinale-Del-Val/003_back.png"
+        img1.write_bytes(b"\x89PNG\r\n\x1a\n" + b"dummy front")
+        img2.write_bytes(b"\x89PNG\r\n\x1a\n" + b"dummy back")
+        
+        with patch.object(push, 'get_credentials') as mock_creds, \
+             patch.object(push, 'create_opener') as mock_opener, \
+             patch.object(push, 'get_csrf_token') as mock_csrf, \
+             patch.object(push, 'upload_file') as mock_upload:
+            
+            # Setup mocks
+            mock_creds.return_value = {
+                "oauth_token": "test_token",
+                "bot_user": None,
+                "bot_password": None,
+                "contact": "test@example.com"
+            }
+            mock_opener.return_value = MagicMock()
+            mock_csrf.return_value = ("csrf_token_123", "")
+            mock_upload.return_value = (True, {"upload": {"result": "Success"}})
+            
+            # Simulate pre-check finding one file exists
+            # Front exists, back doesn't
+            def mock_check_existing(opener, titles, creds):
+                return {"Merry Del Val - 1.png"}  # Front exists
+            
+            with patch.object(push, '_check_existing_files', side_effect=mock_check_existing):
+                result = push.cmd_push(
+                    [str(folder), "--live", "--filename-prefix", "Merry Del Val"],
+                    live=True
+                )
+            
+            # Front should be skipped (exists), back should be uploaded
+            # upload_file should be called only once (for back)
+            assert mock_upload.call_count == 1
+            
+            # Verify the call was for the back file
+            call_args = mock_upload.call_args
+            assert "Merry Del Val - 1 (retro).png" in str(call_args)
+
+
+# =============================================================================
+# Single-image regression tests
+# =============================================================================
+
+class TestSingleImageRegression:
+    """Regression tests for single-image items (unchanged behavior)."""
+    
+    def test_single_image_unchanged(self, tmp_path, sample_item):
+        """Single-image items still upload one file."""
+        folder = tmp_path / "test-single"
+        folder.mkdir()
+        
+        pubdom = {
+            "folder": "test-single",
+            "generated": "2024-01-15",
+            "rule_table_version": "1.0",
+            "current_year": 2024,
+            "items": [sample_item]
+        }
+        
+        # Write pubdom.json
+        (folder / "pubdom.json").write_text(json.dumps(pubdom), encoding="utf-8")
+        
+        # Create dummy image file
+        img = folder / sample_item["extracted_facts"]["images"][0]
+        img.parent.mkdir(parents=True, exist_ok=True)
+        img.write_bytes(b"\x89PNG\r\n\x1a\n" + b"dummy image data")
+        
+        result = push.cmd_push([str(folder), "--filename-prefix", "Test"], live=False)
+        
+        assert result == 0
+        # Should plan exactly one file
+
+
+# =============================================================================
+# Bidirectional other_versions (front <-> retro data link)
+# =============================================================================
+
+class TestOtherVersionsLink:
+    """The front and retro files must reference each other as data."""
+
+    def test_front_wikitext_links_to_retro(self, sample_item_multi_image):
+        """Front Information carries |other_versions= pointing at the retro file."""
+        wt = push.build_wikitext(
+            sample_item_multi_image,
+            other_versions="Retro: [[:File:Merry Del Val - 3 (retro).png|Merry Del Val - 3 (retro).png]]",
+        )
+        assert "|other_versions=Retro: [[:File:Merry Del Val - 3 (retro).png" in wt
+
+    def test_retro_wikitext_links_to_front(self, sample_item_multi_image):
+        """Retro Information carries |other_versions= pointing back at the front."""
+        wt = push.build_retro_wikitext(
+            sample_item_multi_image, "Merry Del Val - 3.png",
+            other_versions="Fronte: [[:File:Merry Del Val - 3.png|Merry Del Val - 3.png]]",
+        )
+        assert "Retro della cartolina [[:File:Merry Del Val - 3.png" in wt
+        assert "|other_versions=Fronte: [[:File:Merry Del Val - 3.png" in wt
+
+    def test_single_side_has_no_other_versions(self, sample_item):
+        """An item without a retro side emits no other_versions field."""
+        wt = push.build_wikitext(sample_item)
+        assert "other_versions" not in wt
+
+    def test_resolve_image_path_encodings(self, tmp_path):
+        """Absolute, folder-prefixed and bare names all resolve to the same file."""
+        folder = tmp_path / "mat"
+        folder.mkdir(parents=True)
+        (folder / "1_fronte.png").write_bytes(b"x")
+        abs_p = folder / "1_fronte.png"
+        assert push._resolve_image_path(folder, str(abs_p)) == abs_p
+        assert push._resolve_image_path(folder, "mat/1_fronte.png") == abs_p
+        assert push._resolve_image_path(folder, "1_fronte.png") == abs_p
+        assert push._resolve_image_path(folder, "nope.png") is None

@@ -273,7 +273,7 @@ The preflight exists so a human can see, before publishing, exactly what would b
 
 ## Push to Wikimedia Commons
 
-**Upload items with `upload.flag='ready'` to Wikimedia Commons.**
+**Upload items with `upload.flag='ready'` to Wikimedia Commons. Each item uploads ALL its images (front + back sides), with retro sides named `(<prefix> - <n> (retro).png)` and minimal {{Information}} pages linking back to the front.**
 
 ```bash
 # Dry-run (default): shows what would be uploaded, NO network calls

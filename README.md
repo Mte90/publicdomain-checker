@@ -139,6 +139,8 @@ In entrambi i casi: `export PD_WM_CONTACT='tua@email'` — serve per lo User-Age
 
 Il wikitext (`{{Information}}`, licenze, categorie) è già assemblato dal pacchetto; un file già esistente su Commons non viene mai sovrascritto (l'elemento risulta fallito con il motivo); `PD_WM_CONTACT` completa lo User-Agent richiesto dall'etichetta API Wikimedia.
 
+**Cosa carica**: ogni item con `upload.flag = ready` — con la policy `all` anche gli incerti — ma il motivo resta scritto sull'elemento. Ogni item carica TUTTE le sue immagini (fronte + retro), con i retro nominati `(<prefix> - <n> (retro).png)` e pagine {{Information}} minime che linkano al fronte.
+
 Output reale del dry-run sul materiale di esempio:
 
 ```text
