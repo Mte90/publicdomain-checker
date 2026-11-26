@@ -324,20 +324,59 @@ class TestFilenameDerivation:
     """Tests for derive_filename function."""
     
     def test_derive_filename_default(self, sample_item):
-        """Default filename derivation."""
-        filename = push.derive_filename(sample_item, "Cardinale-Del-Val", 1)
+        """Default filename derivation for single-item package."""
+        filename = push.derive_filename(sample_item, "Cardinale-Del-Val", 1, 1)
+        assert filename == "Cardinale-Del-Val.jpg"
+    
+    def test_derive_filename_multi_item(self, sample_item):
+        """Multi-item package uses numeric index."""
+        filename = push.derive_filename(sample_item, "Cardinale-Del-Val", 1, 5)
         assert filename == "Cardinale-Del-Val - 1.jpg"
     
     def test_derive_filename_custom_prefix(self, sample_item):
-        """Custom prefix."""
-        filename = push.derive_filename(sample_item, "MyCollection", 5)
+        """Custom prefix for single-item package."""
+        filename = push.derive_filename(sample_item, "MyCollection", 5, 1)
+        assert filename == "MyCollection.jpg"
+    
+    def test_derive_filename_custom_prefix_multi(self, sample_item):
+        """Custom prefix for multi-item package."""
+        filename = push.derive_filename(sample_item, "MyCollection", 5, 10)
         assert filename == "MyCollection - 5.jpg"
     
     def test_derive_filename_png_extension(self, sample_item):
-        """PNG extension detection."""
+        """PNG extension detection for single-item package."""
         sample_item["extracted_facts"]["images"] = ["test.png"]
-        filename = push.derive_filename(sample_item, "Prefix", 1)
+        filename = push.derive_filename(sample_item, "Prefix", 1, 1)
+        assert filename == "Prefix.png"
+    
+    def test_derive_filename_png_extension_multi(self, sample_item):
+        """PNG extension detection for multi-item package."""
+        sample_item["extracted_facts"]["images"] = ["test.png"]
+        filename = push.derive_filename(sample_item, "Prefix", 1, 5)
         assert filename == "Prefix - 1.png"
+
+    def test_derive_filename_single_item_with_year(self, sample_item):
+        """Owner convention: the annata (operative reference year) is part of the name."""
+        sample_item["extracted_facts"]["reference_year"] = 1933
+        filename = push.derive_filename(sample_item, "Concorso Vittoria del Grano", 1, 1)
+        assert filename == "Concorso Vittoria del Grano 1933.jpg"
+
+    def test_derive_filename_multi_item_with_year(self, sample_item):
+        """Sets carry both the annata and the numeric index."""
+        sample_item["extracted_facts"]["reference_year"] = 1955
+        filename = push.derive_filename(sample_item, "Merry Del Val", 3, 8)
+        assert filename == "Merry Del Val 1955 - 3.jpg"
+
+    def test_derive_filename_year_from_item_top_level(self, sample_item):
+        """reference_year at verdict top level is honored too (payload shapes vary)."""
+        sample_item["reference_year"] = 1931
+        filename = push.derive_filename(sample_item, "Concorso", 1, 1)
+        assert filename == "Concorso 1931.jpg"
+
+    def test_derive_filename_no_year_stays_clean(self, sample_item):
+        """Without a reference year the name carries no empty gap."""
+        filename = push.derive_filename(sample_item, "Zeta", 2, 4)
+        assert filename == "Zeta - 2.jpg"
 
 
 # =============================================================================
@@ -711,7 +750,7 @@ class TestMultiImageUpload:
             # Simulate pre-check finding one file exists
             # Front exists, back doesn't
             def mock_check_existing(opener, titles, creds):
-                return {"Merry Del Val - 1.png"}  # Front exists
+                return {"Merry Del Val.png"}  # Front exists (single-item package)
             
             with patch.object(push, '_check_existing_files', side_effect=mock_check_existing):
                 result = push.cmd_push(
@@ -725,7 +764,7 @@ class TestMultiImageUpload:
             
             # Verify the call was for the back file
             call_args = mock_upload.call_args
-            assert "Merry Del Val - 1 (retro).png" in str(call_args)
+            assert "Merry Del Val (retro).png" in str(call_args)
 
 
 # =============================================================================

@@ -998,6 +998,33 @@ def lookup(name: str) -> str | None:
     return None
 
 
+def resolve_live(name: str) -> dict:
+    """Live Wikidata lookup with an exact-match guard.
+
+    The QID is auto-cached only when the top hit's label coincides with the
+    queried name (normalized, case/punctuation-insensitive). When the top
+    hits do not coincide, the result is stored as "ambiguous" with the top
+    candidates — no QID is auto-accepted on a weak match (never-invention
+    rule).
+
+    Returns:
+        {"status": "found"|"not_found"|"ambiguous", "qid": str|None, "candidates": [...]} 
+    """
+    outcome, qid, candidates = _live_resolve(name)
+    cache = _load_wd_cache()
+    if outcome == "found":
+        cache["names"][name] = {"qid": qid, "label_it": name, "label_en": name, "result": "ok", "checked": _today()}
+        _save_wd_cache(cache)
+        return {"status": "found", "qid": qid, "candidates": []}
+    if outcome == "ambiguous":
+        cache["names"][name] = {"qid": None, "label_it": name, "label_en": name, "result": "ambiguous", "candidates": candidates, "checked": _today()}
+        _save_wd_cache(cache)
+        return {"status": "ambiguous", "qid": None, "candidates": candidates}
+    cache["names"][name] = {"qid": None, "label_it": name, "label_en": name, "result": "not_found", "checked": _today()}
+    _save_wd_cache(cache)
+    return {"status": "not_found", "qid": None, "candidates": []}
+
+
 def resolve(name: str, live: bool = False) -> str | None:
     """Resolve a name to a QID, cache-first.
     
@@ -1028,41 +1055,27 @@ def resolve(name: str, live: bool = False) -> str | None:
     if not live:
         return None  # Don't create entry, just return None
     
-    # Live lookup
-    qid = _live_resolve(name)
-    
-    if qid:
-        # Store the result
-        cache["names"][name] = {
-            "qid": qid,
-            "label_it": name,  # Would need additional API call for real labels
-            "label_en": name,
-            "result": "ok",
-            "checked": _today()
-        }
-    else:
-        # Store as not_found
-        cache["names"][name] = {
-            "qid": None,
-            "label_it": name,
-            "label_en": name,
-            "result": "not_found",
-            "checked": _today()
-        }
-    
-    _save_wd_cache(cache)
-    return qid
+    # Live lookup (three-state; qid only on exact match — see resolve_live)
+    outcome = resolve_live(name)
+    return outcome.get("qid")
 
 
-def _live_resolve(name: str) -> str | None:
+def _normalize_for_match(s: str) -> str:
+    """Case/punctuation-insensitive normal form for exact-match guarding."""
+    return " ".join("".join(c if c.isalnum() or c.isspace() else " " for c in s.casefold()).split())
+
+
+def _live_resolve(name: str) -> tuple[str, str | None, list]:
     """Perform a live Wikidata API lookup for a name.
     
-    Uses wbsearchentities to search for the name and returns the best match's QID.
-    
-    Returns:
-        The QID if found, None otherwise.
+    Uses wbsearchentities to search for the name. Returns a three-state
+    outcome: ("found", qid, []) when the top hit's label normalizes equal
+    to the queried name; ("ambiguous", None, top candidates) when the top
+    hits do not coincide — the human must confirm, no QID is auto-accepted;
+    ("none", None, []) when the search returns nothing.
     """
-    url = f"{_WD_CACHE_API_URL}?action=wbsearchentities&search={name}&language=en&format=json"
+    params = urlencode({"action": "wbsearchentities", "search": name, "language": "en", "format": "json"})
+    url = f"{_WD_CACHE_API_URL}?{params}"
     
     req = Request(url, headers={"User-Agent": _MW_USER_AGENT})
     
@@ -1079,20 +1092,22 @@ def _live_resolve(name: str) -> str | None:
         print(f"ERROR: Invalid JSON response from API: {e}", file=sys.stderr)
         return None
     
-    # Get the first result (best match)
     results = data.get("search", [])
     if not results:
-        return None
+        return ("none", None, [])
     
-    # Return the QID of the first result
     first = results[0]
     qid = first.get("id")
+    label = first.get("label") or ""
+    if qid and str(qid).startswith("Q") and _normalize_for_match(label) == _normalize_for_match(name):
+        return ("found", qid, [])
     
-    # Validate it's a QID
-    if qid and qid.startswith("Q"):
-        return qid
-    
-    return None
+    candidates = [
+        {"qid": r.get("id"), "label": r.get("label") or "", "description": r.get("description") or ""}
+        for r in results[:3]
+        if r.get("id") and str(r.get("id")).startswith("Q")
+    ]
+    return ("ambiguous", None, candidates)
 
 
 def search_wd_cache(term: str) -> list[str]:

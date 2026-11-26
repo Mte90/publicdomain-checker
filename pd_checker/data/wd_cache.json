@@ -1,6 +1,6 @@
 {
   "note": "Name → Wikidata QID lookups. This is the only source of QIDs; maintained via the update/resolve flow.",
-  "fetched": "2026-11-23",
+  "fetched": "2026-11-26",
   "names": {
     "Raffaele Merry del Val": {
       "qid": "Q507540",
@@ -120,6 +120,13 @@
       "label_en": "M. Barbieri",
       "result": "not_found",
       "checked": "2026-11-20"
+    },
+    "Grafiche Baroni - Milano": {
+      "qid": null,
+      "label_it": "Grafiche Baroni - Milano",
+      "label_en": "Grafiche Baroni - Milano",
+      "result": "not_found",
+      "checked": "2026-11-26"
     }
   }
 }

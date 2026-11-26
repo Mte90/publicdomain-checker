@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 from . import context
+from .push import derive_filename
 
 
 def _escape(s: str | None) -> str:
@@ -170,33 +171,27 @@ def _render_licence_template(tag: str) -> str:
 
 
 def _render_status_reason(stmt: dict) -> str:
-    """Render status with Italian reason from statement."""
+    """Render the SHORT status badge for the statements table.
+    
+    The badge says one thing; the full human reason lives in the detail list
+    under the table (and as the hover tooltip) — never stuffed into the
+    status cell.
+    """
     status = stmt.get("status", "ok")
     
     if status == "ok":
         return '<span class="wd-status-ok">OK</span>'
     
-    # Build reason for review status
-    qid = stmt.get("qid")
-    qualifiers = stmt.get("qualifiers", [])
-    
-    reason_parts = []
-    
-    # Check for null/missing QID
-    if not qid or qid == "null":
-        reason_parts.append("QID non risolto")
-    
-    # Check for circa qualifier (P1480 = circa)
-    has_circa = any(q.get("property") == "P1480" or q.get("label") == "circa" for q in qualifiers)
-    if has_circa:
-        reason_parts.append("data stimata")
-    
-    # Default reason if none specific
-    if not reason_parts:
-        reason_parts.append("da verificare")
-    
-    reason_text = ", ".join(reason_parts)
-    return f'<span class="wd-status-review" title="{reason_text}">Rivedere: {reason_text}</span>'
+    badges = {
+        "absent": "Assente su Wikidata",
+        "unsearched": "Da cercare",
+        "ambiguous": "Candidati da verificare",
+        "date_estimate": "Data stimata",
+    }
+    label = badges.get(stmt.get("state", ""), "Rivedere")
+    reason = stmt.get("reason")
+    tip = f' title="{_escape(reason)}"' if reason else ""
+    return f'<span class="wd-status-review"{tip}>{label}</span>'
 
 
 def _sort_key(item: dict) -> tuple[int, str]:
@@ -205,7 +200,7 @@ def _sort_key(item: dict) -> tuple[int, str]:
     return (order.get(item["status"], 3), item["file"])
 
 
-def _generate_html(verdicts: list[dict], images_base: str | None, ctx: any, run_manifest: any, upload_policy: str) -> str:
+def _generate_html(verdicts: list[dict], images_base: str | None, ctx: any, run_manifest: any, upload_policy: str, package_upload_prefix: str | None = None) -> str:
     """Generate a self-contained HTML dashboard for review."""
     
     # Preserve original structure for context.suggestions
@@ -903,6 +898,16 @@ def _generate_html(verdicts: list[dict], images_base: str | None, ctx: any, run_
       padding: 0.1rem 0.3rem;
       border-radius: var(--radius-sm);
     }}
+    .wd-reasons {{
+      margin: 0.35rem 0 0 0;
+      padding-left: 1.1rem;
+      font-size: 0.85rem;
+      color: var(--text-muted, #666666);
+    }}
+    .wd-reasons li {{
+      margin-bottom: 0.15rem;
+      line-height: 1.45;
+    }}
     .qualifier-circa {{
       color: var(--status-review);
       font-weight: bold;
@@ -1212,6 +1217,16 @@ def _generate_html(verdicts: list[dict], images_base: str | None, ctx: any, run_
                         wd_html += f'<tr><td>{prop}</td><td>{val_text}</td><td>{status_tag}</td></tr>'
                 wd_html += '</tbody></table>'
                 
+                # Detail list: the full reason per flagged statement, under the table
+                if isinstance(statements, list):
+                    details = [
+                        f'<li><strong>{stmt.get("label") or stmt.get("property")}:</strong> {_escape(stmt.get("reason"))}</li>'
+                        for stmt in statements
+                        if stmt.get("status") == "da_rivedere" and stmt.get("reason")
+                    ]
+                    if details:
+                        wd_html += f'<ul class="wd-reasons">{"".join(details)}</ul>'
+                
                 # Handle both "categories" and "proposed_categories"
                 categories = wd_data.get("categories") or wd_data.get("proposed_categories")
                 if categories:
@@ -1267,15 +1282,116 @@ def _generate_html(verdicts: list[dict], images_base: str | None, ctx: any, run_
             else:
                 licence_html = '<div class="licence-block"><h4 class="block-title">Licenze e Template</h4><p class="no-licence">Nessun template disponibile</p></div>'
             
-            # Country candidates section - generate outside f-string
+            # Country candidates section - FIX: Only show when country is unknown AND candidates exist
+            # When country_of_origin is set, hide the section entirely
+            # When country is unknown but no candidates, show action line
+            country_of_origin = v.get("country_of_origin") or ctx.get("country_of_origin")
             country_candidates = v.get("country_candidates", [])
-            if country_candidates:
+            
+            if country_of_origin:
+                # Country is known - hide section entirely
+                country_html = ''
+            elif country_candidates:
+                # Country unknown but candidates exist - show as today
                 country_items = []
                 for cand in country_candidates:
                     country_items.append(f'<li><strong>{cand.get("country", "")}</strong>: {cand.get("reason", "")} <span class="affidabilita">(Affidabilità: {cand.get("reliability", "N/A")})</span></li>')
                 country_html = f'<div class="country-block"><h4 class="block-title">Candidati Paese (Affidabilità)</h4><ul class="country-list">{"".join(country_items)}</ul></div>'
             else:
-                country_html = '<div class="country-block"><h4 class="block-title">Candidati Paese (Affidabilità)</h4><p class="no-country">Nessun candidato paese</p></div>'
+                # Country unknown and no candidates - show action line
+                country_html = '<div class="country-block"><h4 class="block-title">Paese</h4><p class="no-country">Paese non ipotizzabile: dichiara il paese d\'origine nel contesto della cartella (es. "country_of_origin": "IT")</p></div>'
+            
+            # FIX 5: Planned Commons filename display — use shared derive_filename from push.py
+            # For multi-image items, show BOTH front and retro names
+            pkg_prefix = package_upload_prefix
+            ctx_prefix = (ctx or {}).get("upload_prefix")
+            stem = Path(v.get("file", "")).stem
+            item_num = stem.split("_")[0]
+            if not item_num.isdecimal():
+                item_num = "1"
+            resolved_prefix = pkg_prefix or ctx_prefix
+            if resolved_prefix:
+                filename_source = "pubdom.json" if pkg_prefix else "contesto"
+                # Get total items count from package
+                total_items = len(items) if isinstance(items, list) else 1
+                # Check if item has multiple images (front + retro)
+                images = v.get("extracted_facts", {}).get("images", [])
+                item_num_int = int(item_num) if item_num.isdigit() else 1
+                if isinstance(images, list) and len(images) > 1:
+                    # Show both front and retro using derive_filename
+                    front_name = derive_filename(v, resolved_prefix, item_num_int, total_items)
+                    retro_name = derive_filename(v, resolved_prefix, item_num_int, total_items).replace(".png", " (retro).png")
+                    filename_html = f'<div class="filename-planned"><strong>Nome previsto su Commons:</strong><br>  Fronte: {html.escape(front_name)}<br>  Retro: {html.escape(retro_name)}<br><small>(da {filename_source})</small></div>'
+                else:
+                    # Single image - use derive_filename
+                    planned_filename = derive_filename(v, resolved_prefix, item_num_int, total_items)
+                    filename_html = f'<div class="filename-planned"><strong>Nome previsto su Commons:</strong> {html.escape(planned_filename)} (da {filename_source})</div>'
+            else:
+                filename_html = '<div class="filename-planned"><strong>Nome previsto su Commons:</strong> Nome file assegnato al momento del push (prefisso mancante: aggiungilo al contesto)</div>'
+            
+            # FIX 4: "Cosa fare adesso" block - compact checklist for reviewer
+            action_items = []
+            
+            # 1. Actions for da_rivedere statements (use per-statement reasons)
+            wd_data = v.get("wikidata", {})
+            statements = wd_data.get("statements", []) if wd_data else []
+            if isinstance(statements, list):
+                for stmt in statements:
+                    if stmt.get("status") == "da_rivedere":
+                        reason = stmt.get("reason")
+                        if reason:
+                            action_items.append(f"<strong>{stmt.get('property', '')}:</strong> {reason}")
+            
+            # 2. Actions for entities_to_create (from wikidata block)
+            entities_to_create = wd_data.get("entities_to_create", []) if wd_data else []
+            if isinstance(entities_to_create, list):
+                # Add disclosure lines for entities_to_create
+                for entity in entities_to_create:
+                    name = entity.get("name", "")
+                    action_items.append(
+                        f"<strong>Creazione predefinita:</strong> l'item «{name}» verrà creato su Wikidata con questi dati (etichetta, descrizione, classe, fonte)."
+                    )
+                    action_items.append(
+                        f"<strong>Verifica ora i dati suggeriti prima della creazione</strong> — serve almeno una fonte (source_url), altrimenti «create-entity» salta la creazione."
+                    )
+                    action = entity.get("action", "")
+                    if action:
+                        action_items.append(f"<strong>{entity.get('role', 'entità')} «{entity.get('name', '')}»:</strong> {action}")
+            
+            # 2. Actions for non-copyright blockers
+            for blocker in v.get("blockers_non_copyright", []):
+                blocker_lower = blocker.lower()
+                if "corrispondenza" in blocker_lower or "art. 93" in blocker_lower:
+                    action_items.append("Cartolina spedita a persona identificata: valuta il consenso dell'Art. 93 (destinatario/eredi)")
+                else:
+                    # Generic blocker action
+                    action_items.append(f"Verificare: {blocker}")
+            
+            # 3. Estimated dates (from extracted_facts)
+            ef = v.get("extracted_facts", {})
+            year_source = ef.get("year_source")
+            ref_year = ef.get("reference_year")
+            if year_source in ("estimated", "folder_context") and ref_year:
+                action_items.append(f"Data stimata {ref_year} (fonte: {year_source}): confermala dal pezzo")
+            
+            # 4. Upload flag review
+            upload_flag = v.get("upload", {}).get("flag", "")
+            upload_reason = v.get("upload", {}).get("reason", "")
+            if upload_flag == "review" and upload_reason:
+                action_items.append(f"Revisione upload richiesta: {upload_reason}")
+            
+            # 5. Ready items with no flags
+            if not action_items and upload_flag == "no":
+                action_items.append("Pronto al caricamento: nessuna azione richiesta")
+            
+            # Build "Cosa fare adesso" HTML
+            if action_items:
+                what_to_do_html = '<div class="what-to-do-block"><h4 class="block-title">Cosa fare adesso</h4><ul class="what-to-do-list">'
+                for action in action_items:
+                    what_to_do_html += f'<li>{action}</li>'
+                what_to_do_html += '</ul></div>'
+            else:
+                what_to_do_html = '<div class="what-to-do-block"><h4 class="block-title">Cosa fare adesso</h4><p class="no-action">Nessuna azione specifica richiesta</p></div>'
             
             card_html = f'''
             <div class="card {status_cls} {upload_cls}" id="item-{v['file']}">
@@ -1290,12 +1406,14 @@ def _generate_html(verdicts: list[dict], images_base: str | None, ctx: any, run_
               </div>
               <div class="card-body">
                 {f'<div class="upload-reason-line"><strong>Motivo upload:</strong> {upload_reason}</div>' if upload_reason else ''}
+                {filename_html}
                 <section class="issues-section">
                   <h4 class="block-title">Problemi e Blocchi</h4>
                    <ul class="issues-list">
                      {' '.join([f'<li class="{"blocker" if b.get("type") == "blocker" else "missing"}">{b.get("message")}</li>' for b in v.get("blockers", [])]) if v.get("blockers") else '<li class="no-issues">Nessun problema rilevato</li>'}
                    </ul>
                 </section>
+                {what_to_do_html}
                 {date_html}
                 <div class="meta-row">
                   <span class="confidence">Confidenza: {_translate_confidence(v.get("confidence"))}</span>
@@ -1356,6 +1474,7 @@ def _generate_html(verdicts: list[dict], images_base: str | None, ctx: any, run_
       <footer class="dashboard-footer">
         <p class="meta-subdued">Versione tabelle regole: {rules_version}</p>
         <p class="meta-subdued">Data generazione: {generated_at}</p>
+        <p class="meta-subdued">Codice e metadati: CC0 1.0 Universal</p>
         {f'<p class="model-registry">{model_registry}</p>' if model_registry else ''}
       </footer>
       <a href="#main" class="back-to-top">Torna su ↑</a>
@@ -1411,6 +1530,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # Load run manifest: pubdom.json is canonical, a bare run.json is the legacy fallback.
     run_manifest = None
+    package_upload_prefix = None
     run_path = Path(args.run) if args.run else None
     if not run_path and args.context:
         pubdom_path = Path(args.context) / "pubdom.json"
@@ -1419,6 +1539,7 @@ def main(argv: list[str] | None = None) -> int:
                 pubdom = json.loads(pubdom_path.read_text(encoding="utf-8"))
                 if isinstance(pubdom, dict):
                     run_manifest = pubdom.get("run")
+                    package_upload_prefix = pubdom.get("upload_prefix")
             except (json.JSONDecodeError, OSError) as e:
                 print(f"Warning: failed to load run manifest from {pubdom_path}: {e}", file=sys.stderr)
         if run_manifest is None:
@@ -1436,7 +1557,7 @@ def main(argv: list[str] | None = None) -> int:
         images_base = args.context
 
     # Generate HTML
-    html_content = _generate_html(verdicts, images_base, ctx, run_manifest, args.upload_policy)
+    html_content = _generate_html(verdicts, images_base, ctx, run_manifest, args.upload_policy, package_upload_prefix)
 
     # Write output
     output_path = Path(args.output)

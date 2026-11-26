@@ -10,6 +10,7 @@ Usage:
   python3 -m pd_checker update
   python3 -m pd_checker resolve <name>
   python3 -m pd_checker suggest-country [--language CODE] [--text TEXT] [--postmark TEXT] [--publisher TEXT]
+  python3 -m pd_checker create-entity <folder> [--live]
 
 All commands except `update`, `verify-live`, and `push --live` work offline. `update` and `verify-live`
 touch the network. `preflight` performs a live duplicate check by default; use `--offline`
@@ -238,6 +239,26 @@ def validate_item(
         "ready": not blocked,
         "reasons": reasons if reasons else ["OK"]
     }
+
+
+def _merge_entity_config(entities: list, ctx_data: dict | None) -> None:
+    """Merge durable per-entity configuration from the folder context into the
+    generated entities_to_create block, so pubdom.json is always complete and the
+    configuration survives regeneration.
+
+    Context keys (both optional, both name-keyed maps):
+        "entity_sources": {"<name>": "<source_url>"}  — required by create-entity
+        "entity_p31": {"<name>": "<QID>"}            — validated at creation time
+    """
+    ctx_data = ctx_data or {}
+    entity_sources = ctx_data.get("entity_sources") or {}
+    entity_p31 = ctx_data.get("entity_p31") or {}
+    for entity in entities:
+        name = entity.get("name", "")
+        if not entity.get("source_url") and name in entity_sources:
+            entity["source_url"] = entity_sources[name]
+        if not entity.get("p31_qid") and name in entity_p31:
+            entity["p31_qid"] = entity_p31[name]
 
 
 def cmd_run(argv: list[str]) -> int:
@@ -472,20 +493,86 @@ def cmd_run(argv: list[str]) -> int:
 
     # A root context.json/run.json is a one-time seed; afterwards pubdom.json is canonical.
     previous = _load_pubdom(folder)
-    ctx_data = _read_json(folder / "context.json") or previous.get("context")
+    ctx_from_file = _read_json(folder / "pd_data" / "context.json") or _read_json(folder / "context.json")
+    ctx_from_pubdom = previous.get("context")
+    
+    # Prefer context.json over pubdom.json's context section
+    # But always derive upload_prefix fresh (don't use old value from pubdom.json)
+    if ctx_from_file:
+        ctx_data = ctx_from_file
+    elif ctx_from_pubdom:
+        ctx_data = ctx_from_pubdom
+    else:
+        ctx_data = None
+    
     run_data = _read_json(folder / "run.json") or previous.get("run")
+    
+    # Derive upload_prefix if not already set in context.json
+    # Only derive from collection if upload_prefix is missing
+    if ctx_data is None:
+        ctx_data = {}
+    if "upload_prefix" not in ctx_data:
+        if ctx_data.get("collection"):
+            # Derive from collection name: remove years, Roman numerals, leading articles
+            import re
+            prefix = ctx_data["collection"]
+            # Remove standalone years (e.g., "1931", "1931-1933")
+            prefix = re.sub(r'\s*(19|20)\d{2}[^\w]*', '', prefix)
+            # Remove standalone Roman numerals (e.g., "VII", "XII")
+            prefix = re.sub(r'\b[IVXLCDM]+\b', '', prefix)
+            # Remove non-alphanumeric except spaces and dashes
+            prefix = re.sub(r'[^a-zA-Z0-9\-\s]', '', prefix)
+            # Collapse multiple spaces
+            prefix = re.sub(r' +', ' ', prefix)
+            # Remove leading common words (repeat until no change)
+            for _ in range(3):
+                prefix = re.sub(r'^(Cartolina|Postale|Fotografia|del|della|dello|di|per|la|le)\s+', '', prefix, flags=re.IGNORECASE)
+            # Remove trailing words that are too specific (e.g., "del Grano")
+            prefix = re.sub(r'\s+del\s+\w+$', '', prefix, flags=re.IGNORECASE)
+            prefix = prefix.strip()
+            ctx_data["upload_prefix"] = prefix if prefix else folder.name
+        else:
+            # Sanitize folder name for use as prefix
+            import re
+            folder_prefix = re.sub(r'[^a-zA-Z0-9\-_]', '_', folder.name)
+            folder_prefix = re.sub(r'_+', '_', folder_prefix).strip('_-')
+            ctx_data["upload_prefix"] = folder_prefix
+    upload_prefix = ctx_data["upload_prefix"]
 
     pubdom = {
         "folder": folder.name,
         "generated": date.today().isoformat(),
         "rule_table_version": data.get("rule_table_version", "unknown"),
         "current_year": data.get("current_year", args.current_year),
+        "upload_prefix": upload_prefix,
         "context": ctx_data,
         "run": run_data,
         "items": data.get("items", []),
         "correlations": json.loads(corr.read_text(encoding="utf-8")),
         "manifest": _read_json(manifest_path),
     }
+    
+    # Aggregate entities_to_create from all items
+    entities_to_create = []
+    seen_names = set()
+    for item in data.get("items", []):
+        wikidata = item.get("wikidata", {})
+        for entity in wikidata.get("entities_to_create", []):
+            name = entity.get("name", "")
+            if name and name not in seen_names:
+                entities_to_create.append(entity)
+                seen_names.add(name)
+    
+    # Durable per-entity configuration lives in the FOLDER CONTEXT (survives regeneration):
+    # "entity_sources": {"<name>": "<source_url>"}, "entity_p31": {"<name>": "<QID>"}
+    # Merge into the generated block so pubdom.json is always complete.
+    _merge_entity_config(entities_to_create, ctx_data)
+    
+    if entities_to_create:
+        pubdom["entities_to_create"] = entities_to_create
+    
+    # The tool-generated metadata is released CC0 (see LICENSE); stamp it on the package
+    pubdom["licence"] = "CC0-1.0"
     pubdom_path = folder / "pubdom.json"
     pubdom_path.write_text(json.dumps(pubdom, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"[6/6] consolidate -> {pubdom_path}")
@@ -802,26 +889,47 @@ def cmd_templates_search(argv: list[str]) -> int:
 
 
 def cmd_resolve(argv: list[str]) -> int:
-    """OFFLINE cache-first entity resolution."""
+    """Cache-first entity resolution with optional live lookup."""
     # Lazy import
     from pd_checker.core import catalogs
     wd_cache = catalogs
     
     parser = argparse.ArgumentParser(
-        description="OFFLINE cache-first entity resolution."
+        description="Cache-first entity resolution. Default: offline lookup. Use --live to perform live Wikidata API lookup on cache miss."
     )
     parser.add_argument("name", help="Name to resolve to QID")
+    parser.add_argument("--live", action="store_true", help="Perform live Wikidata API lookup on cache miss; writes result to wd_cache.json")
     args = parser.parse_args(argv)
 
-    # Cache-first lookup (no network)
+    # Cache-first lookup
     qid = wd_cache.lookup(args.name)
 
     if qid:
         print(qid)
         return 0
-    else:
+    
+    # Cache miss
+    if not args.live:
+        # Offline mode: just report not_found
         print("not_found")
         return 0
+    
+    # Live mode: perform live lookup with exact-match guard
+    from .core.catalogs import resolve_live
+    outcome = resolve_live(args.name)
+    status = outcome.get("status")
+    
+    if status == "found":
+        print(outcome.get("qid"))
+        return 0
+    if status == "ambiguous":
+        print("Ricerca ambigua: nessun risultato con nome coincidente. Candidati (verifica tu su Wikidata):")
+        for c in outcome.get("candidates") or []:
+            print(f"  {c.get('qid')} — {c.get('label')} — {c.get('description')}")
+        print("Conferma il QID giusto e aggiungilo a pd_checker/data/wd_cache.json.")
+        return 2
+    print("Non trovato su Wikidata: item inesistente o non ancora creato. Se crei tu l'item (occorre una fonte), rilancia «resolve <nome> --live»; altrimenti la dichiarazione resta senza QID e il nome compare solo nel wikitext della pagina file.")
+    return 1
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -881,10 +989,25 @@ def main(argv: list[str] | None = None) -> int:
     # resolve subcommand
     resolve_parser = subparsers.add_parser(
         "resolve",
-        help="Cache-first entity resolution",
-        description="OFFLINE cache-first entity resolution (delegate to wd_cache); print the QID or not_found."
+        help="Cache-first entity resolution (offline by default, use --live for live lookup)",
+        description="Cache-first entity resolution. Default: offline lookup (print QID or 'not_found'). With --live: perform live Wikidata API lookup on cache miss and write result to wd_cache.json."
     )
     resolve_parser.add_argument("name", help="Name to resolve to QID")
+    resolve_parser.add_argument("--live", action="store_true", help="Perform live Wikidata API lookup on cache miss; writes result to wd_cache.json")
+
+    # create-entity subcommand
+    create_entity_parser = subparsers.add_parser(
+        "create-entity",
+        help="Create Wikidata items for entities_to_create (source gate: no source_url → skipped; P31 validation against catalog)",
+        description="Create Wikidata items for entities_to_create in a folder's pubdom.json. Default: dry-run (print payload only). With --live: actually create items on Wikidata."
+    )
+    create_entity_parser.add_argument("folder", help="Material folder (needs pubdom.json with entities_to_create).")
+    create_entity_parser.add_argument(
+        "--live",
+        action="store_true",
+        default=False,
+        help="Actually create items on Wikidata (default: dry-run, prints payload only)."
+    )
 
     # templates-enrich subcommand
     subparsers.add_parser(
@@ -1004,7 +1127,10 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "update":
         return cmd_update([])
     elif args.command == "resolve":
-        return cmd_resolve([args.name])
+        resolve_args = [args.name]
+        if getattr(args, "live", False):
+            resolve_args.append("--live")
+        return cmd_resolve(resolve_args)
     elif args.command == "templates-enrich":
         return cmd_templates_enrich([])
     elif args.command == "templates-suggest":
@@ -1151,6 +1277,19 @@ def main(argv: list[str] | None = None) -> int:
         if args.live:
             push_argv.append("--live")
         return push.cmd_push(push_argv, live=args.live)
+    elif args.command == "create-entity":
+        from pd_checker.core import create_entity
+        # Build argv from parsed args
+        create_args = [args.folder]
+        if getattr(args, "live", False):
+            create_args.append("--live")
+        rc = create_entity.cmd_create_entity(create_args)
+        # Auto-rerun: after a successful live creation the new QIDs are already in cache —
+        # regenerate the package in the same command so the statements flip to ok immediately.
+        if getattr(args, "live", False) and rc == 0:
+            print("\n[create-entity] Rigenero il pacchetto con i nuovi QID...")
+            cmd_run([args.folder])
+        return rc
     else:
         parser.print_help()
         return 1

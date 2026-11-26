@@ -18,7 +18,7 @@ def load(folder: str) -> dict | None:
     """Read context from <folder>/pubdom.json key 'context', falling back to <folder>/context.json or <folder>/context.md.
 
     Recognised keys:
-      - folder, collection, provenance, rights_holder, country_of_origin
+      - folder, collection, provenance, rights_holder, country_of_origin, upload_prefix
       - period: either [from, to] or a single year
       - notes
       - known_authors: map name -> death year
@@ -39,7 +39,17 @@ def load(folder: str) -> dict | None:
         except (json.JSONDecodeError, OSError):
             pass
 
-    # Try context.json (legacy fallback)
+    # Try pd_data/context.json (preferred location)
+    json_path = folder_path / "pd_data" / "context.json"
+    if json_path.exists():
+        try:
+            ctx = json.loads(json_path.read_text(encoding="utf-8"))
+            if isinstance(ctx, dict):
+                return ctx
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    # Try context.json (legacy fallback in folder root)
     json_path = folder_path / "context.json"
     if json_path.exists():
         try:
@@ -217,6 +227,9 @@ def suggestions(ctx: dict, verdicts: dict) -> list[str]:
         suggestions_list.append("Mancano informazioni sul paese di origine nel contesto")
     if not ctx.get("period"):
         suggestions_list.append("Mancano informazioni sul periodo nel contesto")
+    # upload_prefix suggestion (optional but recommended for Commons uploads)
+    if not ctx.get("upload_prefix"):
+        suggestions_list.append("Prefisso nomi file non impostato: aggiungi 'upload_prefix' al contesto per nomi Commons coerenti (es. 'Concorso-Grano-1933')")
 
     # Verdict-derived nudges: what a reviewer should look at next.
     items = verdicts.get("items", [])

@@ -511,7 +511,7 @@ def test_estimate_year_expiry_21_years_ago_stays_public_domain():
 def test_printing_work_author_emitted_as_publisher_not_photographer():
     """Regression test for Defect 1: A printing works (e.g., 'Stab. Sansaini - Roma') 
     must not be emitted as P170 'autore' (photographer). Instead, emit as P123 publisher 
-    and mark P170 for review.
+    and add a note to the verdict.
     
     This matches the real case in Cardinale-Del-Val/1_fronte.png where author is 
     'Stab. Sansaini - Roma' (a printing works, 'Stab.' = stabilimento tipografico).
@@ -542,17 +542,8 @@ def test_printing_work_author_emitted_as_publisher_not_photographer():
     p170_stmt = next((s for s in result["statements"] if s["property"] == "P170"), None)
     p123_stmt = next((s for s in result["statements"] if s["property"] == "P123"), None)
     
-    # P170 should have null value and be marked for review
-    assert p170_stmt is not None, "P170 statement must exist"
-    assert p170_stmt["value"] is None, (
-        f"P170 value should be None for printing works, got '{p170_stmt['value']}'"
-    )
-    assert p170_stmt["status"] == "da_rivedere", (
-        f"P170 status should be 'da_rivedere', got '{p170_stmt['status']}'"
-    )
-    assert "stabilimento di stampa" in p170_stmt.get("notes", [""])[0].lower(), (
-        "P170 should have a note about printing works"
-    )
+    # FIX: Do NOT emit P170 for printing works - add note to verdict instead
+    assert p170_stmt is None, "P170 should not be emitted for printing works"
     
     # P123 (publisher) should exist with the printing works name
     assert p123_stmt is not None, "P123 (publisher) statement must exist for printing works"
@@ -908,10 +899,8 @@ def test_author_role_printer_emits_p123_not_p170():
     p170_stmt = next((s for s in result["statements"] if s["property"] == "P170"), None)
     p123_stmt = next((s for s in result["statements"] if s["property"] == "P123"), None)
     
-    # P170 should be null and marked for review
-    assert p170_stmt is not None
-    assert p170_stmt["value"] is None
-    assert p170_stmt["status"] == "da_rivedere"
+    # FIX: Do NOT emit P170 for printing works - add note to verdict instead
+    assert p170_stmt is None, "P170 should not be emitted for printer role"
     
     # P123 should exist with the printer name
     assert p123_stmt is not None, "P123 (publisher) must exist for printer role"
@@ -940,10 +929,8 @@ def test_author_role_publisher_emits_p123_not_p170():
     p170_stmt = next((s for s in result["statements"] if s["property"] == "P170"), None)
     p123_stmt = next((s for s in result["statements"] if s["property"] == "P123"), None)
     
-    # P170 should be null and marked for review
-    assert p170_stmt is not None
-    assert p170_stmt["value"] is None
-    assert p170_stmt["status"] == "da_rivedere"
+    # FIX: Do NOT emit P170 for printing works - add note to verdict instead
+    assert p170_stmt is None, "P170 should not be emitted for publisher role"
     
     # P123 should exist with the publisher name
     assert p123_stmt is not None, "P123 (publisher) must exist for publisher role"
@@ -998,11 +985,8 @@ def test_author_role_illustrator_emits_neither_p170_nor_p123():
     p170_stmt = next((s for s in result["statements"] if s["property"] == "P170"), None)
     p123_stmt = next((s for s in result["statements"] if s["property"] == "P123"), None)
     
-    # P170 should be null and marked for review (illustrator is not the photographic creator)
-    assert p170_stmt is not None
-    assert p170_stmt["value"] is None
-    assert p170_stmt["status"] == "da_rivedere"
-    assert "illustratore" in p170_stmt.get("notes", [""])[0].lower()
+    # FIX: Do NOT emit P170 for illustrators - add note to verdict instead
+    assert p170_stmt is None, "P170 should not be emitted for illustrator role"
     
     # P123 should NOT exist for illustrator
     assert p123_stmt is None, "P123 should not exist for illustrator role"
@@ -1030,11 +1014,10 @@ def test_author_role_absent_backward_compatible():
     p170_stmt = next((s for s in result["statements"] if s["property"] == "P170"), None)
     p123_stmt = next((s for s in result["statements"] if s["property"] == "P123"), None)
     
-    # Should behave like today: marker detection finds printing works
-    assert p170_stmt is not None
-    assert p170_stmt["value"] is None
-    assert p170_stmt["status"] == "da_rivedere"
+    # FIX: Do NOT emit P170 for printing works - add note to verdict instead
+    assert p170_stmt is None, "P170 should not be emitted for printing works"
     
+    # P123 should be emitted
     assert p123_stmt is not None
     assert p123_stmt["value"] == "Stab. Sansaini - Roma"
 

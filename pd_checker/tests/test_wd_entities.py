@@ -271,3 +271,48 @@ def test_manifest_license_not_public_domain_no_templates():
     assert len(manifest) == 1
     assert manifest[0]["license_template"] is None
     assert manifest[0]["license_templates"] == []
+
+
+def test_cmd_resolve_live_found_prints_qid_and_exits_zero(monkeypatch, capsys):
+    from pd_checker.__main__ import cmd_resolve
+
+    monkeypatch.setattr(catalogs, "lookup", lambda name: None, raising=True)
+    monkeypatch.setattr(
+        catalogs, "resolve_live", lambda name: {"status": "found", "qid": "Q999999", "candidates": []}, raising=True
+    )
+    rc = cmd_resolve(["Nome Di Prova", "--live"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "Q999999" in out
+
+
+def test_cmd_resolve_live_ambiguous_prints_candidates_and_exits_2(monkeypatch, capsys):
+    from pd_checker.__main__ import cmd_resolve
+
+    monkeypatch.setattr(catalogs, "lookup", lambda name: None, raising=True)
+    outcome = {
+        "status": "ambiguous",
+        "qid": None,
+        "candidates": [{"qid": "Q1", "label": "Baroni", "description": "cognome italiano"}],
+    }
+    monkeypatch.setattr(catalogs, "resolve_live", lambda name: outcome, raising=True)
+    rc = cmd_resolve(["Grafiche Baroni - Milano", "--live"])
+    out = capsys.readouterr().out
+    assert rc == 2
+    assert "Ricerca ambigua" in out
+    assert "Q1" in out
+    assert "wd_cache.json" in out
+
+
+def test_cmd_resolve_live_not_found_prints_guidance_and_exits_1(monkeypatch, capsys):
+    from pd_checker.__main__ import cmd_resolve
+
+    monkeypatch.setattr(catalogs, "lookup", lambda name: None, raising=True)
+    monkeypatch.setattr(
+        catalogs, "resolve_live", lambda name: {"status": "not_found", "qid": None, "candidates": []}, raising=True
+    )
+    rc = cmd_resolve(["Nome Di Prova 2", "--live"])
+    out = capsys.readouterr().out
+    assert rc == 1
+    assert "Non trovato su Wikidata" in out
+    assert "--live" in out

@@ -98,6 +98,7 @@ approximate period, and any known authors with their death years. Then write
   "rights_holder": "private|company|public_body|publisher|holy_see|null",
   "country_of_origin": "IT|GB|VA",
   "period": [1920, 1955],
+  "upload_prefix": "Concorso Vittoria del Grano",
   "notes": "...",
   "known_authors": {"Nome Cognome": 1955}
 }
@@ -145,7 +146,8 @@ python3 -m pd_checker <subcommand>
 | `push <folder> [--live] [--filename-prefix PREFIX]` | Upload ready items to Wikimedia Commons | No (dry-run), Yes with `--live` |
 | `verify-live <folder>` | Verify templates live against Commons API | Yes |
 | `update` | Refresh Commons template and Wikidata entity catalogs | Yes |
-| `resolve <name>` | Cache-first entity resolution (QID lookup) | No |
+| `resolve <name> [--live]` | Cache-first entity resolution; `--live` searches Wikidata with an exact-match guard and caches the outcome (found / not_found / ambiguous) | `--live` only |
+| `create-entity <folder> [--live]` | Create Wikidata items for entities_to_create (source gate: no source_url → skipped; P31 validation against catalog) | `--live` only |
 | `templates-enrich` | Enrich template catalog with category metadata (network) | Yes |
 | `templates-suggest` | Suggest templates by country/anonymous/restrictions (offline) | No |
 | `templates-search <term>` | Search templates by name or category (offline) | No |
@@ -271,16 +273,116 @@ The preflight performs these checks for each item:
 
 The preflight exists so a human can see, before publishing, exactly what would be uploaded and what is missing. It never mutates anything.
 
+## Naming Commons files
+
+**upload_prefix describes the CONTENT (subject/event/series) — never the folder name. The tool appends the annata (the item's operative reference year) automatically at derivation time.**
+
+- **Single-item folders**: `<prefix> <year>.png` and `<prefix> <year> (retro).png` (no numeric index).
+- **Multi-item folders**: `<prefix> <year> - <n>.png` / `<prefix> <year> - <n> (retro).png`.
+- **No reference year**: the year part is simply omitted — never an empty gap.
+- **Retro sides**: always get the ` (retro)` suffix and their own minimal page, cross-linked via `other_versions`.
+- **Consistency**: if a collection may grow, number from the start (` - 1`, ` - 2`, ...).
+
+**upload_prefix derivation**:
+- Prefer a descriptive name from the content (e.g., `Concorso Vittoria del Grano` from the collection title)
+- Never use the bare folder name (meaningless)
+- Do NOT put the year inside upload_prefix — the tool appends the annata from the item's operative reference year (estimates included); the page's date evidence documents the confidence
+- The folder name remains only the mechanical last-resort fallback
+
+## entities_to_create
+
+When a named entity (author, publisher, etc.) ends QID-less with cache state `not_found` or `ambiguous`, the package carries an `entities_to_create` suggestion. **The durable configuration lives in the folder context** (`entity_sources` / `entity_p31`, keyed by name) and is merged into the generated block at every `run` — never fill `source_url` directly in pubdom.json, it would be lost at the next regeneration:
+
+```json
+// pd_data/context.json
+"entity_sources": {"Grafiche Baroni - Milano": "https://…"},
+"entity_p31": {"Grafiche Baroni - Milano": "Q19652"}
+```
+
+Then ONE command creates everything ready: `create-entity <folder> --live` creates every entity whose source is present, writes the new QIDs into wd_cache.json and **automatically re-runs the pipeline**, so the statements flip to `ok` in the same execution. Entities without a source stay `[SALTATO]`; unvalidated p31_qids are refused. Suggested block shape (generated):
+
+```json
+{
+  "name": "Grafiche Baroni - Milano",
+  "role": "editore",
+  "source_url": "https://…",  // merged from context.entity_sources — required, no source = never created
+  "p31_qid": null,  // optional "instance of" class QID — validated against wikidata_entities.json when present
+  "suggested": {
+    "label": "Grafiche Baroni - Milano",
+    "note": "La classe precisa (es. impresa tipografica) si sceglie al momento della creazione"
+  },
+  "action": "Crea l'item su wikidata.org (occorre una fonte), poi rilancia «resolve 'Grafiche Baroni - Milano' --live»: il QID va in cache e la dichiarazione diventa ok al prossimo run."
+}
+```
+
+**For `ambiguous` names**: the entry includes a `candidates` array with the QID/label/description for the human's check.
+
+**Review loop**: in "Cosa fare adesso", one line per entity to create (use the action text).
+
+### create-entity command
+
+Create Wikidata items directly from the CLI:
+
+```bash
+# Dry-run (default): prints the payload without creating anything
+python3 -m pd_checker create-entity <folder>
+
+# Live: actually creates items on Wikidata
+python3 -m pd_checker create-entity <folder> --live
+```
+
+**Workflow**:
+1. Review entities_to_create on the dashboard (default-creation disclosure shows what will be created)
+2. Fill `source_url` for each entity (required — without it, the entity is skipped)
+3. Optionally fill `p31_qid` with a validated class QID from `wikidata_entities.json`
+4. Run `create-entity` in dry-run mode to verify the payload
+5. Run `create-entity --live` to create the items
+6. QIDs are written to `wd_cache.json` as result "ok" → next `run` makes the statement ok
+
+**Hard rules**:
+- **Never create without a source**: entities WITHOUT `source_url` are NEVER created (printed as `[SALTATO]`)
+- **Never emit an unvalidated QID**: `p31_qid` MUST be in `wikidata_entities.json`; unknown QIDs are refused
+
+**Exit codes**:
+- Dry-run: 0 (1 if folder has no entities_to_create)
+- Live: 0 if ≥1 created, 1 if all refused or credentials missing
+
+---
+
+## Review loop (dashboard → agent)
+
+The dashboard is the human's review surface. Every "Cosa fare adesso" action maps to something the agent can execute — when the human raises it, answer with the matching action, never by hand-editing verdicts:
+
+- "Conferma la data" — re-inspect the scan, correct `reference_year` / `year_source` in `pd_data/facts.json`, re-run. Only a year printed on the item (text, postmark) may decide a boundary.
+- "resolve «nome» --live" — run `python3 -m pd_checker resolve "<name>" --live`. A found QID is cached and the next `run` turns the statement `ok`. Not found (exit 1) means the item does not exist on Wikidata: leave the statement QID-less (the name stays in the wikitext) or the human creates the item with a source and re-resolves. Ambiguous (exit 2) means the top Wikidata hits do not coincide with the name: the candidates are printed for the human to confirm — never auto-cache a weak match.
+- "Dichiara il paese" — add `country_of_origin` to `pd_data/context.json`, re-run.
+- Non-copyright blockers (Art. 93 correspondence, portrait rights, privacy) — human decision only. Never override, never upload past a blocker under `strict`.
+- "Pronto al caricamento" — propose `push` (dry-run is the default); `--live` only on the owner's explicit go.
+
+Rule: the human decides, the agent executes; the agent never resolves a legal doubt by itself.
+
+## End-to-end: analyze → review → upload
+
+One owner message like «analizza <cartella> e, siccome mi va tutto bene, caricala» CAN drive the whole chain — but only through this exact order, with the three hard gates on the way (never skip, never force):
+
+1. Extract (vision) → `run` the pipeline → regenerate dashboard.
+2. Ask the owner for the folder context if missing (never invent provenance, holder, country, period).
+3. Walk the review loop: unresolved names → `resolve --live`; missing entities → `entities_to_create` (created only with `source_url`, via `create-entity --live`, which also auto-reruns the package); blockers → owner decides.
+4. `preflight` the package: every BLOCKED reason must be either fixed (context, sources, categories) or explicitly accepted by the owner — the Commons acceptance gate (licence + source + ≥1 category) refuses items under EVERY policy and is never bypassed.
+5. `push <folder>` (dry-run): show the owner the plan — names, wikitext, flags — and the upload policy in force.
+6. Only on the owner's explicit go (their message counts if it clearly says "upload"/«carica»): `push --live` with the prefix from context; report per-file results. Credentials must already be in the environment (PD_WM_*); if missing, stop and point to the README procedure — the agent never asks for secrets in chat and never creates credentials itself.
+7. The owner can compress steps 3–6 into one confirmation («carica tutto»): that waives their item-by-item review — set `--upload-policy` accordingly (their responsibility; the reasons stay written on the items) — but the acceptance gate and the credentials rule still stand.
+
 ## Push to Wikimedia Commons
 
-**Upload items with `upload.flag='ready'` to Wikimedia Commons. Each item uploads ALL its images (front + back sides), with retro sides named `(<prefix> - <n> (retro).png)` and minimal {{Information}} pages linking back to the front.**
+**Upload items with `upload.flag='ready'` to Wikimedia Commons. Each item uploads ALL its images (front + back sides): retro sides get the ` (retro)` suffix, sets number with ` - <n>`, single items carry no index, and the annata (operative reference year) is appended by the shared `derive_filename`. Retro pages are minimal {{Information}} pages linking back to the front.**
 
 ```bash
 # Dry-run (default): shows what would be uploaded, NO network calls
 python3 -m pd_checker push <folder> [--filename-prefix PREFIX]
 
 # Live upload: actual upload to Commons (requires credentials)
-python3 -m pd_checker push <folder> --live --filename-prefix PREFIX
+python3 -m pd_checker push <folder> --live [--filename-prefix PREFIX]
 ```
 
 **Dry-run is the default** — without `--live` it prints the plan per item:
@@ -288,6 +390,13 @@ python3 -m pd_checker push <folder> --live --filename-prefix PREFIX
 - Wikitext that would be used
 - Upload comment
 - Makes ZERO network calls, needs NO credentials
+
+**Filename prefix resolution order:**
+1. **Explicit `--filename-prefix` flag** (highest priority)
+2. **Context `upload_prefix`** key (if set in context.json or pubdom.json context)
+3. **Sanitized folder name** (fallback)
+
+The prefix is sanitized (removes path separators and dangerous characters, keeps spaces). When a default is auto-derived, the command prints which source was used.
 
 **Tracking**: every uploaded wikitext carries `[[Category:Uploaded with pd-checker]]` — the hidden tool-tracking category (established Commons practice; MediaWiki creates the category page on first use). Override with `--tracking-category <name>`, disable with `--no-tracking`. `preflight` exempts this category from the unknown-category BLOCKED check because the page is tool-seeded, unlike user categories which must pre-exist in `cat_cache.json`.
 
@@ -409,10 +518,13 @@ marks the statement `da_rivedere`.
 
 **Commands:**
 
-**Resolve a name to QID** (cache-first, live fallback):
+**Resolve a name to QID** (cache-first; `--live` adds a guarded Wikidata search — exact match auto-caches, non-coinciding top hits are stored as `ambiguous` with the candidates for the human, nothing found stores `not_found`):
 ```bash
 python3 -m pd_checker resolve "Rafael Merry del Val"
 # Prints: Q507540
+
+python3 -m pd_checker resolve "Grafiche Baroni - Milano" --live
+# Ambiguous → prints the top candidates, exit 2: the human confirms the right QID
 ```
 
 **Note**: Cache search/list functionality is available through the `catalogs` module as library calls (no standalone CLI).

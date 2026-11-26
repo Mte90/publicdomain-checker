@@ -171,16 +171,19 @@ def build_wikitext(item: dict, other_versions: str | None = None, tracking_categ
 # Filename derivation
 # =============================================================================
 
-def derive_filename(item: dict, prefix: str, item_number: int) -> str:
+def derive_filename(item: dict, prefix: str, item_number: int, total_items: int = 1) -> str:
     """Derive Commons filename from item.
     
     Args:
-        item: Item dict (used for validation)
+        item: Item dict (used for validation + reference year)
         prefix: Filename prefix from --filename-prefix
         item_number: Item number (1-based)
+        total_items: Total number of items in the package (for single/multi scheme)
         
     Returns:
-        Filename string like "<prefix> - <n>.png"
+        Filename string like "<prefix> <year>.png" (single item) or "<prefix> <year> - <n>.png"
+        (multi); the year part (annata, from the operative reference year) is omitted
+        when the item carries no reference year.
     """
     # Get image extension from first image
     images = (item.get("extracted_facts") or {}).get("images", [])
@@ -191,7 +194,16 @@ def derive_filename(item: dict, prefix: str, item_number: int) -> str:
         if not ext:
             ext = ".png"
     
-    return f"{prefix} - {item_number}{ext}"
+    # Annata (operative reference year) — owner convention: part of the Commons filename
+    year = item.get("reference_year") or (item.get("extracted_facts") or {}).get("reference_year")
+    year_part = f" {year}" if isinstance(year, int) else ""
+    
+    # Single-item packages: no numeric index
+    if total_items == 1:
+        return f"{prefix}{year_part}{ext}"
+    
+    # Multi-item packages: use numeric index
+    return f"{prefix}{year_part} - {item_number}{ext}"
 
 
 def _resolve_image_path(folder: Path, name: str) -> Path | None:
@@ -483,7 +495,7 @@ def cmd_push(argv: list[str], live: bool = False) -> int:
         "--filename-prefix",
         metavar="PREFIX",
         type=str,
-        help="Prefix for Commons filenames (REQUIRED for live upload)"
+        help="Prefix for Commons filenames (optional: falls back to context.upload_prefix or folder name)"
     )
     parser.add_argument(
         "--live",
@@ -582,22 +594,59 @@ def cmd_push(argv: list[str], live: bool = False) -> int:
     
     ready_items = valid_items
     
-    # Validate filename prefix
+    # Validate filename prefix with resolution order:
+    # 1. Explicit --filename-prefix flag
+    # 2. pubdom.json upload_prefix
+    # 3. context.json upload_prefix
+    # 4. Sanitized folder name fallback
     prefix = args.filename_prefix
-    if live and not prefix:
-        print(
-            "[push] ERROR: --filename-prefix REQUIRED per upload LIVE.",
-            file=sys.stderr
-        )
-        print(
-            "[push] I file su Commons devono avere nomi significativi.",
-            file=sys.stderr
-        )
-        return 1
     
     if not prefix:
-        # Dry-run default: use folder name
+        # Try pubdom.json upload_prefix first
+        pubdom_path = folder / "pubdom.json"
+        if pubdom_path.exists():
+            try:
+                pubdom = json.loads(pubdom_path.read_text(encoding="utf-8"))
+                if isinstance(pubdom, dict) and pubdom.get("upload_prefix"):
+                    prefix = pubdom["upload_prefix"]
+                    prefix_source = "pubdom.json"
+            except (json.JSONDecodeError, OSError):
+                pass
+        
+        # Try context.json if not found in pubdom.json
+        if not prefix:
+            from . import context as ctx_module
+            folder_ctx = ctx_module.load(str(folder))
+            if folder_ctx and folder_ctx.get("upload_prefix"):
+                prefix = folder_ctx["upload_prefix"]
+                prefix_source = "contesto"
+        
+        # Fallback to sanitized folder name
+        if not prefix:
+            prefix = folder.name
+            prefix_source = "nome cartella (default)"
+    else:
+        prefix_source = "flag --filename-prefix"
+    
+    # Sanitize prefix (keep spaces, remove path separators and dangerous chars)
+    import re
+    # Remove path separators and null bytes
+    prefix = prefix.replace('/', '_').replace('\\', '_').replace('\x00', '')
+    # Remove other dangerous characters but keep spaces and most punctuation
+    prefix = re.sub(r'[<>:"|?*]', '_', prefix)
+    # Collapse multiple spaces
+    prefix = re.sub(r' +', ' ', prefix)
+    prefix = prefix.strip(' ')
+    
+    if not prefix:
         prefix = folder.name
+        prefix_source = "nome cartella (fallback)"
+    
+    # Print which source the prefix came from
+    print(f"[push] Prefisso nomi file: '{prefix}' (da: {prefix_source})")
+    
+    # For live mode, prefix is now always set (from one of the sources above)
+    # No longer required as a flag
     
     # Handle live mode
     credentials = None
@@ -663,6 +712,7 @@ def cmd_push(argv: list[str], live: bool = False) -> int:
     print()
     
     results = []
+    total_items = len(ready_items)
     
     # For live mode: pre-check existing files in batches
     if live:
@@ -676,10 +726,10 @@ def cmd_push(argv: list[str], live: bool = False) -> int:
             for side_idx, img_path_str in enumerate(images):
                 # Derive filename for this side
                 if side_idx == 0:
-                    filename = derive_filename(item, prefix, item_num)
+                    filename = derive_filename(item, prefix, item_num, total_items)
                 else:
                     # Retro side: derive base name then add retro suffix
-                    base_filename = derive_filename(item, prefix, item_num)
+                    base_filename = derive_filename(item, prefix, item_num, total_items)
                     # Replace extension to add retro suffix
                     stem = Path(base_filename).stem
                     ext = Path(base_filename).suffix
@@ -730,7 +780,7 @@ def cmd_push(argv: list[str], live: bool = False) -> int:
             continue
         
         # Plan side filenames first: the wikitext of each side must link to the others
-        front_filename = derive_filename(item, prefix, item_num)
+        front_filename = derive_filename(item, prefix, item_num, total_items)
         front_stem = Path(front_filename).stem
         ext = Path(front_filename).suffix
         planned = []

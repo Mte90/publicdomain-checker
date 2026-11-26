@@ -10,6 +10,8 @@ Gli internals del pacchetto sono descritti in [`pd_checker/README.md`](pd_checke
 
 Esempio di dashboard generata da questo progetto: [`dashboard.html`](dashboard.html) (senza le immagini).
 
+Il codice e i metadati generati (pubdom.json, dashboard, dichiarazioni Wikidata) sono rilasciati con **CC0 1.0 Universal** — vedi [LICENSE](LICENSE): riusali liberamente, anche commercialmente, senza chiedere il permesso.
+
 ## Cosa non è
 
 - Non è consulenza legale. Il verdetto è deterministico e documentato; la decisione finale di pubblicare è tua.
@@ -25,7 +27,9 @@ Esempio di dashboard generata da questo progetto: [`dashboard.html`](dashboard.h
 
 4. **Rivedi la dashboard.** L'agente produce `Concorsi/pubdom.json` e `Concorsi/dashboard.html`. Apri `Concorsi/dashboard.html` nel browser: per ogni elemento trovi il verdetto, l'affidabilità, la base legale, l'evidenza della data, i metadati Wikimedia proposti e le miniature. Se l'agente lavora in un ambiente remoto, scarica prima i file dalla cartella del progetto.
 
-5. **Carica quando gli elementi sono *Pronto*.** Il caricamento parte sempre in dry-run: `push` mostra cosa invierebbe, senza rete e senza credenziali. Prima dell'invio, `preflight` verifica il pacchetto (duplicati su Commons, template e categorie) e segnala ogni blocco con il motivo. L'invio vero richiede `--live` e le tue credenziali Wikimedia, un token OAuth owner-only o una bot password: la procedura completa per crearle è nel blocco sviluppatori qui sotto. I file già esistenti su Commons non vengono mai sovrascritti.
+5. **Se una persona o un editore del pezzo non è su Wikidata**, la dashboard te lo dice nella lista dettagli («Assente su Wikidata»): puoi lasciare così — il nome resta comunque nel wikitext della pagina file — oppure creare l'item tu e sistemare tutto con un solo comando: vedi «Completare le entità mancanti» nel blocco caricamento qui sotto.
+
+6. **Carica quando gli elementi sono *Pronto*.** Il caricamento parte sempre in dry-run: `push` mostra cosa invierebbe, senza rete e senza credenziali. Prima dell'invio, `preflight` verifica il pacchetto (duplicati su Commons, template e categorie) e segnala ogni blocco con il motivo. L'invio vero richiede `--live` e le tue credenziali Wikimedia, un token OAuth owner-only o una bot password: la procedura completa per crearle è nel blocco sviluppatori qui sotto. I file già esistenti su Commons non vengono mai sovrascritti.
 
 ## Come si decide il verdetto
 
@@ -88,6 +92,9 @@ python3 -m pd_checker validate Concorsi
 
 # controllo del pacchetto di caricamento (--offline salta le verifiche di rete)
 python3 -m pd_checker preflight Concorsi --offline
+
+# crea entità Wikidata per entities_to_create (--live per l'invio, source_url obbligatorio)
+python3 -m pd_checker create-entity Concorsi
 ```
 
 Opzioni utili per `run`:
@@ -146,11 +153,13 @@ Per ogni elemento, `pubdom.json` contiene tutto ciò che serve: il blocco `{{Inf
 
 ```bash
 # dry-run (default): nessuna rete, nessuna credenziale — mostra cosa invierebbe
-python3 -m pd_checker push Concorsi
+python3 -m pd_checker push Concorsi [--filename-prefix PREFISSO]
 
-# invio vero: servono credenziali e un prefisso per i nomi dei file
-python3 -m pd_checker push Concorsi --live --filename-prefix "Concorsi"
+# invio vero: servono credenziali; il prefisso è opzionale (flag > contesto > nome cartella)
+python3 -m pd_checker push Concorsi --live [--filename-prefix "Prefisso"]
 ```
+
+**Il prefisso dei nomi file è ora opzionale** — risoluzione in ordine: 1) flag `--filename-prefix`, 2) chiave `upload_prefix` nel contesto (context.json o pubdom.json), 3) nome della cartella (sanificato). Quando un prefisso è derivato automaticamente, il comando stampa la fonte usata.
 
 Ogni file caricato porta automaticamente la categoria nascosta `[[Category:Uploaded with pd-checker]]`, per tracciare gli upload fatti col tool (personalizzabile con `--tracking-category`, disattivabile con `--no-tracking`).
 
@@ -173,7 +182,7 @@ Cosa serve — una delle due vie, mai la password dell'account. Nota: il token O
 
 In entrambi i casi: `export PD_WM_CONTACT='tua@email'` — serve per lo User-Agent richiesto dalla policy Wikimedia. Se cambi la password dell'account, la bot password smette di funzionare finché non la rigeneri.
 
-**Cosa carica**: ogni item con `upload.flag = ready` — con la policy `all` anche gli incerti — ma il motivo resta scritto sull'elemento. Ogni item carica TUTTE le sue immagini (fronte + retro), con i retro nominati `(<prefix> - <n> (retro).png)` e pagine {{Information}} minime che linkano al fronte.
+**Cosa carica**: ogni item con `upload.flag = ready` — con la policy `all` anche gli incerti — ma il motivo resta scritto sull'elemento. Ogni item carica TUTTE le sue immagini (fronte + retro): i retro prendono il suffisso « (retro)», i set numerano con « - <n>», il pezzo singolo resta senza indice, e l'annata ( anno di riferimento) è accodata dal tool. Le pagine {{Information}} dei retro sono minime e linkano al fronte.
 
 Output reale del dry-run sul materiale di esempio:
 
@@ -202,10 +211,16 @@ Con zero elementi pronti (policy strict) il comando rifiuta ed esce con errore: 
 
 Apri commons.wikimedia.org con il tuo account, carica il file dell'elemento da Special:Upload e incolla nel campo descrizione il wikitext assemblandolo dai campi dell'elemento (`{{Information}}` + template di licenza + categorie); le dichiarazioni Wikidata (P31, P170, P180, P571…) si aggiungono nella scheda Structured data, con i QID presi dal pacchetto (per es. P180 = Rafael Merry del Val → `Q507540`).
 
+#### Completare le entità mancanti (`create-entity`)
+
+Quando un'entità (autore, editore, ecc.) finisce senza QID (stato della cache `not_found` o `ambiguous`), il pacchetto genera un suggerimento `entities_to_create` in `pubdom.json`. Il flusso è un gesto solo, dopo una configurazione una volta sola:
+
+1. **Configura la fonte nel contesto della cartella** (`pd_data/context.json`): `"entity_sources": {"Grafiche Baroni - Milano": "https://…"}` e, se vuoi la classe, `"entity_p31": {"…": "Q…"}`. La configurazione è durevole — sopravvive a ogni rigenerazione del pacchetto; senza fonte la creazione viene saltata (`[SALTATO]`).
+2. **Controlla il dry-run**: `python3 -m pd_checker create-entity <cartella>` — mostra il payload che verrebbe inviato (etichetta, descrizione, classe, fonte).
+3. **Crea tutto in un colpo**: `create-entity <cartella> --live` — crea ogni entità con la fonte pronta, scrive i QID in cache **e rigenera subito il pacchetto**: le dichiarazioni passano a `ok` nella stessa esecuzione, senza passaggi successivi.
+
 ### Sviluppo
 
 ```bash
 python3 -m pytest pd_checker/tests -q
 ```
-
-Conteggio attuale: 242 test.

@@ -38,27 +38,42 @@ Q_COPYRIGHTED = "Q50423863"
 Q_CIRCA = "Q5727902"
 
 
-def _lookup_qid(name: str) -> tuple[str | None, str]:
-    """Look up a name in the cache. Returns (qid, status).
+def _lookup_qid(name: str) -> tuple[str | None, str, str]:
+    """Look up a name in the cache. Returns (qid, status, cache_state).
     
     Uses cache_lookup for OFFLINE, cache-only resolution.
-    If the name is not in cache, returns (None, "da_rivedere").
-    If the name is in cache with result "not_found", returns (None, "da_rivedere").
-    If the name is in cache with result "ok", returns (qid, "ok").
+    
+    Args:
+        name: The name to look up
+        
+    Returns:
+        Tuple of (qid, status, cache_state) where:
+        - qid: The QID if found, None otherwise
+        - status: "ok" if QID found, "da_rivedere" otherwise
+        - cache_state: "found_ok" (QID in cache), "found_not_found" (searched, no QID), "found_ambiguous" (searched, top hits did not coincide — human must confirm), "not_in_cache" (never searched)
     
     This function performs NO network I/O.
     """
     if not name:
-        return None, "da_rivedere"
+        return None, "da_rivedere", "not_in_cache"
     
-    # Use the cache lookup (offline, no side effects)
-    qid = cache_lookup(name)
+    # Load cache to check if name was ever searched
+    from .catalogs import _load_wd_cache
+    cache = _load_wd_cache()
+    entry = cache.get("names", {}).get(name)
     
-    if qid:
-        return qid, "ok"
-    
-    # Not found in cache -> mark for review
-    return None, "da_rivedere"
+    if entry:
+        # Name was searched before
+        if entry.get("result") == "ok" and entry.get("qid"):
+            return entry["qid"], "ok", "found_ok"
+        if entry.get("result") == "ambiguous":
+            # Searched, top hits did not coincide — human must confirm
+            return None, "da_rivedere", "found_ambiguous"
+        # Searched but not found
+        return None, "da_rivedere", "found_not_found"
+    else:
+        # Never searched
+        return None, "da_rivedere", "not_in_cache"
 
 
 def _build_statements(verdict: dict, ctx: dict) -> list[dict]:
@@ -143,12 +158,13 @@ def _build_statements(verdict: dict, ctx: dict) -> list[dict]:
             "qid": None,
             "source": "extracted_facts.reference_year",
             "status": "da_rivedere" if is_estimated else "ok",
+            "state": "date_estimate" if is_estimated else "ok",
         }
         
-        # Add qualifiers for estimates
+        # Add qualifiers and reason for estimates
         if is_estimated:
             # Get circa QID from cache
-            circa_qid, _ = _lookup_qid("circa")
+            circa_qid, _, _ = _lookup_qid("circa")
             stmt["qualifiers"] = [
                 {
                     "property": P1480,
@@ -156,6 +172,8 @@ def _build_statements(verdict: dict, ctx: dict) -> list[dict]:
                     "qid": circa_qid,
                 }
             ]
+            # Add reason for reviewer
+            stmt["reason"] = f"Data stimata (fonte: {year_source}): confermala leggendo la data stampata o il timbro sul pezzo"
         
         statements.append(stmt)
     else:
@@ -210,57 +228,67 @@ def _build_statements(verdict: dict, ctx: dict) -> list[dict]:
                         pass
         
         if author_is_printing_work:
-            # Printing works/publisher: emit as P123 instead of P170, mark for review
-            statements.append({
-                "property": P170,
-                "label": "autore",
-                "value": None,
-                "qid": None,
-                "source": "extracted_facts.author (printing works - not a person)",
-                "status": "da_rivedere",
-                "notes": [f"Il campo 'author' ('{author}') sembra essere uno stabilimento di stampa, non una persona; non usare per P170."],
-            })
-            # Emit publisher info separately for reviewer reference
-            statements.append({
+            # Printing works: emit as P123 only, do NOT emit P170
+            # The {{unknown|author}} in wikitext covers the missing creator
+            # Add a note to the verdict for reviewer awareness
+            verdict.setdefault("notes", []).append(
+                f"Autore ignoto: nessuna dichiarazione SDC per P170 (l'autore '{author}' è uno stabilimento di stampa)"
+            )
+            # Emit publisher info
+            qid, pub_status, pub_cache_state = _lookup_qid(author)
+            stmt = {
                 "property": "P123",
                 "label": "editore",
                 "value": author,
-                "qid": None,
+                "qid": qid,
                 "source": "extracted_facts.author (printing works)",
-                "status": "da_rivedere",
-                "notes": ["Editore/stabilimento di stampa rilevato dal campo author, da verificare."],
-            })
+                "status": pub_status,
+            }
+            if qid is None and pub_status == "da_rivedere":
+                if pub_cache_state == "found_not_found":
+                    stmt["state"] = "absent"
+                    stmt["reason"] = f"Item «{author}» cercato su Wikidata: inesistente (o non ancora creato). Se crei l'item (occorre una fonte), rilancia «resolve «{author}» --live»; altrimenti la dichiarazione resta senza QID: il nome compare comunque nel wikitext della pagina file."
+                elif pub_cache_state == "found_ambiguous":
+                    stmt["state"] = "ambiguous"
+                    stmt["reason"] = f"Ricerca «{author}» su Wikidata ambigua: nessun risultato con nome coincidente. Controlla i candidati («resolve «{author}» --live» li ristampa) e conferma il QID giusto a mano nella cache."
+                else:
+                    stmt["state"] = "unsearched"
+                    stmt["reason"] = f"Nome «{author}» non ancora cercato: chiedi all'agente «resolve «{author}» --live» — se l'item esiste, il QID entra in cache e al prossimo run la dichiarazione diventa ok."
+            statements.append(stmt)
         elif author_is_illustrator:
-            # Illustrator: emit neither P170 nor P123, mark for review
-            statements.append({
-                "property": P170,
-                "label": "autore",
-                "value": None,
-                "qid": None,
-                "source": "extracted_facts.author (illustrator - not the photographic creator)",
-                "status": "da_rivedere",
-                "notes": [f"Il campo 'author' ('{author}') è un illustratore; non emettere P170 per la fotografia."],
-            })
+            # Illustrator: emit neither P170 nor P123
+            # Add a note to the verdict for reviewer awareness
+            verdict.setdefault("notes", []).append(
+                f"Autore ignoto: nessuna dichiarazione SDC per P170 (l'autore '{author}' è un illustratore)"
+            )
         else:
             # Photographer or unknown (no marker detected): emit P170 normally
-            qid, author_status = _lookup_qid(author)
-            statements.append({
+            qid, author_status, author_cache_state = _lookup_qid(author)
+            stmt = {
                 "property": P170,
                 "label": "autore",
                 "value": author,
                 "qid": qid,
                 "source": "extracted_facts.author",
                 "status": author_status,
-            })
+            }
+            # Add reason if QID not found
+            if qid is None and author_status == "da_rivedere":
+                if author_cache_state == "found_ambiguous":
+                    stmt["state"] = "ambiguous"
+                    stmt["reason"] = f"Ricerca «{author}» su Wikidata ambigua: nessun risultato con nome coincidente. Controlla i candidati («resolve «{author}» --live» li ristampa) e conferma il QID giusto a mano nella cache."
+                elif author_cache_state == "found_not_found":
+                    # Searched but item doesn't exist
+                    stmt["state"] = "absent"
+                    stmt["reason"] = f"Item «{author}» cercato su Wikidata: inesistente (o non ancora creato). Se crei l'item (occorre una fonte), rilancia «resolve «{author}» --live»; altrimenti la dichiarazione resta senza QID: il nome compare comunque nel wikitext della pagina file."
+                else:
+                    # Never searched
+                    stmt["state"] = "unsearched"
+                    stmt["reason"] = f"Nome «{author}» non ancora cercato: chiedi all'agente «resolve «{author}» --live» — se l'item esiste, il QID entra in cache e al prossimo run la dichiarazione diventa ok."
+            statements.append(stmt)
     else:
-        statements.append({
-            "property": P170,
-            "label": "autore",
-            "value": None,
-            "qid": None,
-            "source": "extracted_facts.author",
-            "status": "da_rivedere",
-        })
+        # FIX: Do NOT emit P170 when author is None/empty - {{unknown|author}} covers it
+        pass  # No statement emitted
     
     # P180: raffigura (from ctx depicts AND from item's visible_text)
     # Track QIDs we've already emitted to avoid duplicates
@@ -272,7 +300,7 @@ def _build_statements(verdict: dict, ctx: dict) -> list[dict]:
         for dep in depicts:
             label = dep.get("label", "")
             # Resolve through cache — never use a qid from context that isn't in cache
-            qid, _ = _lookup_qid(label)
+            qid, _, _ = _lookup_qid(label)
             if qid and qid not in emitted_p180_qids:
                 emitted_p180_qids[qid] = label
                 statements.append({
@@ -301,7 +329,7 @@ def _build_statements(verdict: dict, ctx: dict) -> list[dict]:
             for name in cache_names:
                 # Case-insensitive search for the name in visible text
                 if name.lower() in text_to_search:
-                    qid, _ = _lookup_qid(name)
+                    qid, _, _ = _lookup_qid(name)
                     if qid:
                         # Keep the first name we find for each QID as canonical
                         if qid not in qid_to_canonical:
@@ -324,18 +352,19 @@ def _build_statements(verdict: dict, ctx: dict) -> list[dict]:
             pass
     
     # P7482: origine del file
+    # FIX: Only emit P7482 if the value is a Wikidata QID, not free-text
+    # Free-text provenance goes in wikitext |source=, not as an SDC statement
     provenance = ctx.get("provenance")
-    rights_holder = ctx.get("rights_holder")
-    file_origin = provenance or rights_holder
-    if file_origin:
+    if provenance and isinstance(provenance, str) and provenance.startswith("Q"):
         statements.append({
             "property": P7482,
             "label": "origine del file",
-            "value": file_origin,
-            "qid": None,
-            "source": "context.provenance/rights_holder",
-            "status": "da_rivedere",
+            "value": provenance,
+            "qid": provenance,
+            "source": "context.provenance",
+            "status": "ok",
         })
+    # Free-text provenance is skipped - it goes in wikitext |source=
     
     return statements
 
@@ -408,7 +437,7 @@ def build(verdict: dict, ctx: dict) -> dict:
         ctx: Context from context.json (folder-level)
         
     Returns:
-        A wikidata block: {"statements": [...], "categories": [...], "review": [...], "information": {...}}
+        A wikidata block: {"statements": [...], "categories": [...], "review": [...], "information": {...}, "entities_to_create": [...]}
     
     Provenance: every QID is resolved through wd_cache.lookup().
     If a name is not in cache, no QID is emitted and status is da_rivedere.
@@ -438,6 +467,48 @@ def build(verdict: dict, ctx: dict) -> dict:
         if s.get("status") == "da_rivedere"
     ]
     
+    # Build entities_to_create from QID-less statements with cache states not_found or ambiguous
+    # EXCLUDE date properties (P571) - dates are not entities that can be created
+    entities_to_create = []
+    seen_names = set()
+    for stmt in statements:
+        if stmt.get("qid") is None and stmt.get("status") == "da_rivedere":
+            value = stmt.get("value")
+            prop = stmt.get("property", "")
+            # Skip date properties (P571) - dates are not entities
+            if prop == "P571":
+                continue
+            if value and value not in seen_names:
+                # Determine role from property
+                role_map = {
+                    "P170": "autore",
+                    "P123": "editore",
+                    "P180": "raffigura",
+                    "P7482": "origine",
+                }
+                role = role_map.get(prop, "entità")
+                
+                # Build entity entry with optional source_url and p31_qid fields
+                entity_entry = {
+                    "name": value,
+                    "role": role,
+                    "source_url": "",  # Empty by default — filled during review
+                    "p31_qid": None,  # Optional "instance of" class QID — validated against catalog when present
+                    "suggested": {
+                        "label": value,
+                        "note": "La classe precisa (es. impresa tipografica) si sceglie al momento della creazione"
+                    },
+                    "action": f"Crea l'item su wikidata.org (occorre una fonte), poi rilancia «resolve '{value}' --live»: il QID va in cache e la dichiarazione diventa ok al prossimo run."
+                }
+                
+                # Add candidates if ambiguous
+                if stmt.get("_cache_state") == "found_ambiguous":
+                    # Candidates would be available from the cache lookup
+                    entity_entry["candidates"] = []  # Placeholder for candidates
+                
+                entities_to_create.append(entity_entry)
+                seen_names.add(value)
+    
     # Update verdict's commons_categories
     verdict["commons_categories"] = categories
     
@@ -446,6 +517,7 @@ def build(verdict: dict, ctx: dict) -> dict:
         "categories": categories,
         "review": review,
         "information": information,
+        "entities_to_create": entities_to_create,
     }
 
 
