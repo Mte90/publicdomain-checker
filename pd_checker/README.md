@@ -1,6 +1,6 @@
 # pd_checker — internals del pacchetto
 
-Pacchetto Python, file di catalogo e suite di test. La documentazione rivolta all'utente è nella radice del repository ([`../README.md`](../README.md)); il riferimento legale è in [`../publicdomain-checker.md`](../publicdomain-checker.md).
+Pacchetto Python, file di catalogo e suite di test. La documentazione rivolta all'utente — incluso il dettaglio legale — è nella radice del repository ([`../README.md`](../README.md)).
 
 ## Cosa fa il pacchetto
 

@@ -33,11 +33,25 @@ Il motore valuta il paese d'origine e l'Italia applicando la regola del termine 
 
 Ogni verdetto riporta l'affidabilità, la base legale e il motivo. Dati mancanti e vincoli non-copyright sono indicati separatamente. Quando il verdetto è `incerto` non viene emesso alcun template di licenza.
 
-Il dettaglio legale per ciascun paese è in [`publicdomain-checker.md`](publicdomain-checker.md).
+Le regole operative, in sintesi (i termini decorrono dal 1° gennaio dell'anno successivo, Art. 32-ter):
+
+| Materiale | Regola | Template |
+| --- | --- | --- |
+| Foto semplice scattata ≤2004 | ventennale già scaduto → pubblico dominio, affidabilità media (la riforma L. 182/2025 non risuscita i termini scaduti) | `{{PD-Italy}}` + `{{PD-1996}}` |
+| Foto semplice scattata ≥2005 | protetta 70 anni dalla produzione | — |
+| Opera artistica, autore noto | 70 anni dalla morte dell'autore (Art. 25) | `{{PD-old-70}}` + `{{PD-1996}}` |
+| Opera artistica anonima | 70 anni dalla prima pubblicazione (Art. 27) | `{{PD-anon-70-EU}}` + `{{PD-1996}}` |
+| Lettera privata | copyright vita+70, ma il consenso dell'Art. 93 non scade: sempre `incerto` | — |
+
+Un anno stimato che cada a meno di dieci anni da una scadenza non decide: il verdetto resta `incerto`. Un'opera il cui termine era già scaduto alla data URAA (1° gennaio 1996) è PD anche negli USA (`{{PD-1996}}`); le fotografie britanniche anonime pre-1957 lo erano solo se realizzate entro il 1925 (revival UK del 1995, reg. 16(d)) — le altre restano sotto copyright USA fino a 95 anni dalla pubblicazione.
+
+Il Vaticano segue 70 anni (L. CXCVII/2017) e non ha template di paese su Commons: si usano i tag generici europei.
+
+Fonti primarie: L. 633/1941 · L. 182/2025 art. 47 · Direttive 93/98/CEE e 2006/116/CE · Convenzione di Berna · 17 U.S.C. §104A (URAA) · CDPA 1988 s.12 ([legislation.gov.uk](https://www.legislation.gov.uk/ukpga/1988/48/section/12)) · Copyright Act 1956 s.3(4)(b) · SI 1995/3297 regg. 5 e 16 ([legislation.gov.uk](https://www.legislation.gov.uk/uksi/1995/3297/regulation/16)). Nessun verdetto è consulenza legale: la decisione di caricare resta tua.
 
 ## Limiti
 
-Il verdetto è tanto buono quanto l'estrazione: l'agente legge le scansioni con un modello a visione e un errore di lettura (una data, un nome) si propaga al verdetto, per questo la dashboard mostra l'evidenza della data da verificare. Un nome assente dalla cache non riceve QID e resta `da_rivedere`; alcune questioni sui termini UK e USA restano aperte, segnalate in [`publicdomain-checker.md`](publicdomain-checker.md); le dichiarazioni Wikidata strutturate restano un passaggio manuale.
+Il verdetto è tanto buono quanto l'estrazione: un errore di lettura (una data, un nome) si propaga al verdetto, per questo la dashboard mostra l'evidenza della data da verificare. Un nome assente dalla cache non riceve QID e resta `da_rivedere`. I termini UK e USA sono verificati sulle fonti primarie e fissati nel motore; le dichiarazioni Wikidata strutturate restano un passaggio manuale.
 
 ## Percorso da riga di comando / per sviluppatori
 

@@ -498,9 +498,9 @@ shorter term (Art. 188): they are protected in Italy no longer than at origin.
 | Case | Templates | Reason |
 |------|-----------|--------|
 | Italian simple photo, PD, author known/irrelevant | `{{PD-Italy}}` | PD-Italy for Italian photos; `{{PD-1996}}` per the per-class URAA condition below |
-| Italian simple photo, PD, anonymous/pseudonymous | `{{PD-Italy}}`, `{{PD-anon-70-EU}}` | PD-anon-70-EU for anonymous EU works; `{{PD-1996}}` per the per-class URAA condition below |
+| Italian simple photo, PD, anonymous/pseudonymous | `{{PD-Italy}}` | Connected right, not author's right — the anon-EU tag does not apply to simple photographs; `{{PD-1996}}` per the per-class URAA condition below |
 | Artistic photo, PD, author death >70y ago | `{{PD-old-70}}` | PD-old-70 for life+70; `{{PD-1996}}` per the per-class URAA condition below |
-| Anonymous/pseudonymous work, PD | `{{PD-anon-70-EU}}`, `{{PD-Italy}}` | EU anonymous works; `{{PD-1996}}` per the per-class URAA condition below |
+| Anonymous artistic/pseudonymous work, PD | `{{PD-anon-70-EU}}` | EU anonymous works; `{{PD-1996}}` per the per-class URAA condition below |
 | Not in PD / uncertain | `[]` | No templates |
 
 **URAA condition for {{PD-1996}} (per-class, live rule)**: the template
