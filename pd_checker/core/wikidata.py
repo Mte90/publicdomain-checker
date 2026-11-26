@@ -27,6 +27,9 @@ P275 = "P275"  # licenza
 P571 = "P571"  # data di creazione
 P170 = "P170"  # autore
 P180 = "P180"  # raffigura
+# Ordinary words that can appear in an Italian transcription and in the cache
+# (e.g. the circa qualifier item) but must never be emitted as a depicted entity.
+_P180_STOPWORDS = {"circa"}
 P7482 = "P7482"  # origine del file
 P1480 = "P1480"  # circostanze della fonte
 
@@ -322,7 +325,10 @@ def _build_statements(verdict: dict, ctx: dict) -> list[dict]:
         try:
             from .catalogs import _load_wd_cache
             cache = _load_wd_cache()
-            cache_names = list(cache.get("names", {}).keys())
+            cache_names = [
+                name for name in cache.get("names", {}).keys()
+                if name.lower() not in _P180_STOPWORDS
+            ]
             
             # First pass: build QID → canonical name mapping from visible_text matches
             qid_to_canonical = {}
@@ -380,14 +386,21 @@ def _build_information(verdict: dict, ctx: dict) -> dict:
     """
     extracted = verdict.get("extracted_facts", {})
     
-    # Description in Italian from visible text/subject
+    # Description in Italian from the transcription — full text, never truncated.
+    # The front side's OCR transcription (written by `ocr --apply`) is the most
+    # complete source; the vision transcription is the fallback.
     visible_text = extracted.get("visible_text") or ""
     doc_type = (extracted.get("document_type") or "unknown").lower()
+    ocr_texts = extracted.get("ocr_texts") or {}
+    images = extracted.get("images") or []
+    front_ocr = None
+    if images and ocr_texts:
+        front_ocr = ocr_texts.get(images[0].split("/")[-1])
+    transcription = front_ocr or visible_text
     
     # Build Italian description
-    if visible_text:
-        # Use visible text as description
-        description = visible_text[:200]  # Truncate if too long
+    if transcription:
+        description = transcription.replace("|", " / ")
     else:
         # Fallback description based on document type
         descriptions = {

@@ -172,38 +172,55 @@ def build_wikitext(item: dict, other_versions: str | None = None, tracking_categ
 # =============================================================================
 
 def derive_filename(item: dict, prefix: str, item_number: int, total_items: int = 1) -> str:
-    """Derive Commons filename from item.
-    
+    """Derive the Commons filename for an item's front side.
+
+    Content-themed naming takes priority: when extracted_facts.content_title is
+    present, the file is named after what it IS — '<content_title> [<annata>]<ext>'.
+    The title is authored by the extraction step and must be unique in the
+    package: push's acceptance gate refuses items whose derived name collides
+    with an earlier item's, instead of silently renumbering them.
+
+    Without a content_title the legacy prefix scheme applies:
+    '<prefix> [<annata>]<ext>' (single-item package) or
+    '<prefix> [<annata>] - <item_number><ext>' (multi-item package).
+
+    The annata (operative reference year) is omitted when the item carries no
+    reference year — never an empty gap in the name.
+
     Args:
         item: Item dict (used for validation + reference year)
-        prefix: Filename prefix from --filename-prefix
-        item_number: Item number (1-based)
-        total_items: Total number of items in the package (for single/multi scheme)
-        
+        prefix: Filename prefix from --filename-prefix (legacy/fallback scheme)
+        item_number: Item number (1-based, legacy multi-item scheme)
+        total_items: Total number of items in the package (legacy single/multi scheme)
+
     Returns:
-        Filename string like "<prefix> <year>.png" (single item) or "<prefix> <year> - <n>.png"
-        (multi); the year part (annata, from the operative reference year) is omitted
-        when the item carries no reference year.
+        Filename string like "<content_title> <year>.png" (content-titled) or
+        "<prefix> <year>.png" / "<prefix> <year> - <n>.png" (legacy scheme).
     """
+    facts = item.get("extracted_facts") or {}
+
     # Get image extension from first image
-    images = (item.get("extracted_facts") or {}).get("images", [])
+    images = facts.get("images", [])
     ext = ".png"  # default
     if images:
         first_image = images[0]
         ext = Path(first_image).suffix.lower()
         if not ext:
             ext = ".png"
-    
+
     # Annata (operative reference year) — owner convention: part of the Commons filename
-    year = item.get("reference_year") or (item.get("extracted_facts") or {}).get("reference_year")
+    year = item.get("reference_year") or facts.get("reference_year")
     year_part = f" {year}" if isinstance(year, int) else ""
-    
-    # Single-item packages: no numeric index
+
+    title = (facts.get("content_title") or "").strip()
+    if title:
+        return f"{title}{year_part}{ext}"
+
+    # Legacy prefix-based scheme: only for items without a content_title
     if total_items == 1:
         return f"{prefix}{year_part}{ext}"
-    
-    # Multi-item packages: use numeric index
     return f"{prefix}{year_part} - {item_number}{ext}"
+
 
 
 def _resolve_image_path(folder: Path, name: str) -> Path | None:
@@ -551,6 +568,7 @@ def cmd_push(argv: list[str], live: bool = False) -> int:
     # Also check: source declared, at least one category (Commons checklist)
     valid_items = []
     refused_items = []  # List of (index, reason_string)
+    seen_derived = set()  # Derived Commons names claimed so far (dup check)
     
     for i, item in ready_items:
         file_path = item.get("file", "unknown")
@@ -573,6 +591,13 @@ def cmd_push(argv: list[str], live: bool = False) -> int:
         categories = item.get("commons_categories", [])
         if not categories:
             reasons.append("nessuna categoria — Commons segnala i file non categorizzati")
+        
+        # Check 4: derived Commons name must be unique in the package —
+        # content_title collisions are a data error: refused loudly, never auto-renumbered
+        derived_name = derive_filename(item, "", i, len(ready_items))
+        if derived_name in seen_derived:
+            reasons.append(f"nome Commons derivato duplicato («{derived_name}») — content_title deve essere unico nel pacchetto")
+        seen_derived.add(derived_name)
         
         if reasons:
             # Refuse with all applicable reasons
@@ -744,7 +769,11 @@ def cmd_push(argv: list[str], live: bool = False) -> int:
         # Pre-check all planned titles in ONE API query
         if planned_titles:
             existing_titles = _check_existing_files(opener, planned_titles, credentials)
-            print(f"[PRE-CHECK] {len(existing_titles)} file già esistenti su Commons")
+            if existing_titles:
+                for existing_name in sorted(existing_titles):
+                    print(f"[PRE-CHECK] già esistente su Commons: {existing_name}")
+            else:
+                print("[PRE-CHECK] nessun file già esistente su Commons")
     
     for item_num, item in ready_items:
         file_path = item.get("file", "")
@@ -938,10 +967,13 @@ def _check_existing_files(opener: urllib.request.OpenerDirector, titles: list[st
         # Extract existing pages
         pages = data.get("query", {}).get("pages", {})
         for page_id, page_data in pages.items():
-            if page_id != "-1":  # -1 means page doesn't exist
-                title = page_data.get("title", "")
-                if title.startswith("File:"):
-                    existing.add(title[5:])  # Remove "File:" prefix
+            # MediaWiki batch queries number MISSING pages -1, -2, -3…:
+            # the pageid alone is not existence evidence, the "missing" flag is.
+            if "missing" in page_data:
+                continue
+            title = page_data.get("title", "")
+            if title.startswith("File:"):
+                existing.add(title[5:])  # Remove "File:" prefix
     
     return existing
 

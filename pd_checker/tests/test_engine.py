@@ -1228,3 +1228,158 @@ def test_upload_policy_pd_only_unchanged():
         upload_policy=engine.UPLOAD_POLICY_PD_ONLY,
     )
     assert verdict_missing["upload"]["flag"] == engine.UPLOAD_REVIEW
+
+
+# =============================================================================
+# Licence template candidates (uncertain verdicts)
+# =============================================================================
+
+def test_uncertain_photo_missing_year_suggests_pd_italy():
+    verdict = engine.evaluate(
+        _item(reference_year=None, country_of_origin="IT"),
+        current_year=2026,
+    )
+    assert verdict["status"] == engine.UNCERTAIN
+    assert verdict["commons_templates"] == []
+    candidates = verdict.get("commons_templates_candidate") or []
+    assert [c["template"] for c in candidates] == ["{{PD-Italy}}"]
+    assert candidates[0]["perche"]
+
+
+def test_uncertain_printed_playbill_suggests_both_alternatives():
+    verdict = engine.evaluate(
+        _item(
+            document_type="unknown",
+            photo_classification="unclear",
+            is_anonymous=False,
+            author="F.lli Faraoni",
+            author_role="printer",
+            country_of_origin="IT",
+            visible_text="TEATRO FLAVIO VESPASIANO | RIETI",
+            publisher="Rieti Tip. F.lli Faraoni",
+        ),
+        current_year=2026,
+    )
+    assert verdict["status"] == engine.UNCERTAIN
+    candidates = verdict.get("commons_templates_candidate") or []
+    assert [c["template"] for c in candidates] == ["{{PD-Italy}}", "{{PD-anon-70-EU}}"]
+
+
+def test_uncertain_letter_has_no_candidates():
+    verdict = engine.evaluate(
+        _item(
+            document_type="letter",
+            photo_classification="unclear",
+            has_handwriting=True,
+            country_of_origin="IT",
+            reference_year=1921,
+            year_source="visible_text",
+            visible_text="MUNICIPIO DI RIETI | Li 26 ottobre 1921",
+        ),
+        current_year=2026,
+    )
+    assert verdict["status"] == engine.UNCERTAIN
+    assert not verdict.get("commons_templates_candidate")
+
+
+def test_non_it_country_gets_no_candidates():
+    verdict = engine.evaluate(
+        _item(reference_year=None, country_of_origin="GB"),
+        current_year=2026,
+    )
+    assert not verdict.get("commons_templates_candidate")
+
+
+def test_public_domain_verdict_has_no_candidates():
+    verdict = engine.evaluate(_item(reference_year=1910), current_year=2026)
+    assert verdict["status"] == engine.PUBLIC_DOMAIN
+    assert not verdict.get("commons_templates_candidate")
+
+
+# =============================================================================
+# Official public-body documents (military/municipal/state)
+# =============================================================================
+
+def test_uncertain_public_body_document_suggests_edict_gov_pair():
+    """An official public-body document (Art. 5 L.633/1941) suggests the two Italy gov tags."""
+    verdict = engine.evaluate(
+        _item(
+            document_type="manuscript",
+            photo_classification="unclear",
+            has_handwriting=True,
+            country_of_origin="IT",
+            rights_holder="public_body",
+            is_anonymous=False,
+            author="Comando Divisione Territoriale di Roma",
+            reference_year=1918,
+            year_source="visible_text",
+            visible_text="COMANDO DIVISIONE TERRITORIALE DI ROMA | Tessera | Roma, li 19 Febbraio 1918",
+        ),
+        current_year=2026,
+    )
+    assert verdict["status"] == engine.UNCERTAIN
+    candidates = verdict.get("commons_templates_candidate") or []
+    assert [c["template"] for c in candidates] == ["{{PD-Italy-EdictGov}}", "{{PD-ItalyGov}}"]
+    assert all(c["perche"] for c in candidates)
+
+
+def test_uncertain_private_letter_still_has_no_candidates():
+    """Regression: only PUBLIC-BODY correspondence gets the official-docs pair."""
+    verdict = engine.evaluate(
+        _item(
+            document_type="letter",
+            photo_classification="unclear",
+            has_handwriting=True,
+            country_of_origin="IT",
+            rights_holder="private",
+            reference_year=1921,
+            year_source="visible_text",
+            visible_text="Lettera privata",
+        ),
+        current_year=2026,
+    )
+    assert verdict["status"] == engine.UNCERTAIN
+    assert not verdict.get("commons_templates_candidate")
+
+
+# =============================================================================
+# Owner's explicit PD declaration (owner_verdict)
+# =============================================================================
+
+def test_owner_verdict_declares_public_domain():
+    verdict = engine.evaluate(
+        _item(
+            document_type="unknown",
+            photo_classification="unclear",
+            country_of_origin="IT",
+            is_anonymous=False,
+            author="F.lli Faraoni",
+            author_role="printer",
+            publisher="Rieti Tip. F.lli Faraoni",
+            visible_text="TEATRO FLAVIO VESPASIANO | RIETI",
+            owner_verdict={"template": "{{PD-Italy}}", "basis": "dichiarazione del proprietario"},
+        ),
+        current_year=2026,
+    )
+    assert verdict["status"] == engine.PUBLIC_DOMAIN
+    assert verdict["commons_templates"] == ["{{PD-Italy}}"]
+    assert verdict["commons_templates_candidate"] == []
+    assert "dichiarato dal proprietario" in verdict["reason"]
+    assert not verdict.get("missing_data")
+    assert verdict["upload"]["flag"] == engine.UPLOAD_READY
+    assert any("PD-1996" in n for n in verdict["notes"])
+
+
+def test_owner_verdict_keeps_non_copyright_blockers():
+    """The declaration resolves the copyright side only: portrait blockers stay."""
+    verdict = engine.evaluate(
+        _item(
+            reference_year=1910,
+            has_identifiable_people=True,
+            owner_verdict={"template": "{{PD-Italy}}", "basis": "dichiarazione"},
+        ),
+        current_year=2026,
+    )
+    assert verdict["status"] == engine.PUBLIC_DOMAIN
+    assert any("96-97" in b for b in verdict["blockers_non_copyright"])
+    assert verdict["upload"]["flag"] == engine.UPLOAD_REVIEW

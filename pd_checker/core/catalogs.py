@@ -1025,6 +1025,39 @@ def resolve_live(name: str) -> dict:
     return {"status": "not_found", "qid": None, "candidates": []}
 
 
+def cache_confirmed(name: str, qid: str) -> dict:
+    """Cache a human-confirmed QID for a name (post-ambiguous-candidate review).
+
+    The exact-match guard never auto-accepts a non-coinciding label; this is
+    the ONLY sanctioned write path after the human reviews the candidates.
+    Fetches it/en labels live so the entry matches resolve_live's own shape;
+    when the label fetch fails the confirmed name still lands in the cache
+    (the human authority is the evidence, labels are decoration).
+    """
+    if not re.fullmatch(r"Q[1-9][0-9]*", qid):
+        return {"status": "invalid", "qid": None, "error": f"QID non valido: {qid!r}"}
+    label_it, label_en = name, name
+    url = f"{_WIKIDATA_API_URL}?action=wbgetentities&ids={qid}&sites=global&languages=it|en&props=labels&format=json"
+    req = Request(url, headers={"User-Agent": _WIKIDATA_USER_AGENT})
+    entities = {}
+    try:
+        with urlopen(req, timeout=30) as response:
+            entities = json.loads(response.read().decode("utf-8")).get("entities", {})
+    except (HTTPError, URLError, json.JSONDecodeError):
+        entities = {}
+    if "missing" in entities.get(qid, {}):
+        return {"status": "not_found", "qid": None, "error": f"{qid} non esiste su Wikidata"}
+    labels = entities.get(qid, {}).get("labels", {}) or {}
+    if labels.get("it", {}).get("value"):
+        label_it = labels["it"]["value"]
+    if labels.get("en", {}).get("value"):
+        label_en = labels["en"]["value"]
+    cache = _load_wd_cache()
+    cache["names"][name] = {"qid": qid, "label_it": label_it, "label_en": label_en, "result": "ok", "checked": _today()}
+    _save_wd_cache(cache)
+    return {"status": "ok", "qid": qid, "label_it": label_it, "label_en": label_en}
+
+
 def resolve(name: str, live: bool = False) -> str | None:
     """Resolve a name to a QID, cache-first.
     

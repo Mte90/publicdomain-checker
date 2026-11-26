@@ -157,7 +157,13 @@ def validate_item(
     
     sha1_results = {}
     for img in images:
-        img_path = folder / img if not img.startswith("/") else Path(img)
+        # Image refs arrive as bare names or folder-prefixed ("Varie/x.png"),
+        # depending on the pipeline version that wrote them — both must resolve
+        # to the same file or the duplicate check silently skips the image.
+        if img.startswith("/"):
+            img_path = Path(img)
+        else:
+            img_path = folder / img if (folder / img).exists() else folder / Path(img).name
         sha1 = compute_sha1(img_path)
         if sha1:
             sha1_results[img] = sha1
@@ -899,7 +905,17 @@ def cmd_resolve(argv: list[str]) -> int:
     )
     parser.add_argument("name", help="Name to resolve to QID")
     parser.add_argument("--live", action="store_true", help="Perform live Wikidata API lookup on cache miss; writes result to wd_cache.json")
+    parser.add_argument("--confirm", metavar="QID", help="Cache a human-confirmed QID for this name (after reviewing ambiguous candidates); fetches labels live")
     args = parser.parse_args(argv)
+
+    if args.confirm:
+        from .core.catalogs import cache_confirmed
+        outcome = cache_confirmed(args.name, args.confirm)
+        if outcome.get("status") == "invalid" or outcome.get("status") == "not_found":
+            print(f"[resolve] {outcome.get('error')}", file=sys.stderr)
+            return 1
+        print(f"[cache] {args.name} -> {outcome.get('qid')} (confermato dall'utente) [{outcome.get('label_it')} / {outcome.get('label_en')}]")
+        return 0
 
     # Cache-first lookup
     qid = wd_cache.lookup(args.name)
@@ -926,7 +942,7 @@ def cmd_resolve(argv: list[str]) -> int:
         print("Ricerca ambigua: nessun risultato con nome coincidente. Candidati (verifica tu su Wikidata):")
         for c in outcome.get("candidates") or []:
             print(f"  {c.get('qid')} — {c.get('label')} — {c.get('description')}")
-        print("Conferma il QID giusto e aggiungilo a pd_checker/data/wd_cache.json.")
+        print("Conferma il QID giusto e rilancia: python3 -m pd_checker resolve \"<nome>\" --confirm <QID>")
         return 2
     print("Non trovato su Wikidata: item inesistente o non ancora creato. Se crei tu l'item (occorre una fonte), rilancia «resolve <nome> --live»; altrimenti la dichiarazione resta senza QID e il nome compare solo nel wikitext della pagina file.")
     return 1
@@ -1008,6 +1024,17 @@ def main(argv: list[str] | None = None) -> int:
         default=False,
         help="Actually create items on Wikidata (default: dry-run, prints payload only)."
     )
+
+    # ocr subcommand
+    ocr_parser = subparsers.add_parser(
+        "ocr",
+        help="OCR transcription of the folder's scans via the regolo OCR endpoint",
+        description="NETWORK: Transcribe scans with an OCR model (default deepseek-ocr-2 via regolo, OpenAI-compatible). Env config: PD_OCR_API_KEY (or REGOLOAI_OPENCODE_API_KEY), PD_OCR_BASE_URL, PD_OCR_MODEL. --apply writes ocr_texts into facts.json."
+    )
+    ocr_parser.add_argument("folder", help="Material folder (needs facts.json)")
+    ocr_parser.add_argument("--file", dest="files", action="append", metavar="NAME", help="Transcribe only this image basename (repeatable; must be claimed by an item)")
+    ocr_parser.add_argument("--apply", action="store_true", help="Write the transcriptions into facts.json (ocr_texts per item)")
+    ocr_parser.add_argument("--timeout", type=int, default=600, help="Per-request timeout in seconds (default 600)")
 
     # templates-enrich subcommand
     subparsers.add_parser(
@@ -1120,6 +1147,15 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_run([args.folder, "--images-base", args.images_base, "--current-year", str(args.current_year), "--upload-policy", args.upload_policy])
     elif args.command == "status":
         return cmd_status([args.folder])
+    elif args.command == "ocr":
+        from .core import ocr as _ocr
+        tail = [args.folder]
+        for name in (args.files or []):
+            tail += ["--file", name]
+        if args.apply:
+            tail.append("--apply")
+        tail += ["--timeout", str(args.timeout)]
+        return _ocr.main(tail)
     elif args.command == "validate":
         return cmd_validate([args.folder])
     elif args.command == "verify-live":

@@ -1202,6 +1202,9 @@ def _generate_html(verdicts: list[dict], images_base: str | None, ctx: any, run_
                 if isinstance(statements, list):
                     for stmt in statements:
                         val_text = str(stmt.get("value", ""))
+                        qid = stmt.get("qid")
+                        if qid:
+                            val_text += f' <a href="https://www.wikidata.org/wiki/{qid}" target="_blank" rel="noopener" class="wd-qid">{qid}</a>'
                         prop = stmt.get("property", "")
                         label = stmt.get("label", "")
                         prop_display = f"{prop} — {label}" if label else prop
@@ -1266,11 +1269,34 @@ def _generate_html(verdicts: list[dict], images_base: str | None, ctx: any, run_
                 date_html += '<p class="date-line">Nessun dato disponibile</p>'
             date_html += '</div>'
             
+            # Full transcription panel: OCR per side plus the vision transcription,
+            # both complete — the dashboard is the review evidence surface
+            transcription_parts = []
+            ocr_map = ef.get("ocr_texts") or {}
+            for img in (ef.get("images") or []):
+                side_text = ocr_map.get(img.split("/")[-1])
+                if side_text:
+                    transcription_parts.append(
+                        f'<details class="ocr-side"><summary>{html.escape(img.split("/")[-1])} — trascrizione OCR</summary>'
+                        f'<pre class="transcription">{html.escape(side_text).replace("|", chr(10))}</pre></details>'
+                    )
+            vision_text = ef.get("visible_text") or ""
+            if vision_text:
+                transcription_parts.append(
+                    f'<details class="ocr-side" open><summary>Trascrizione visione</summary>'
+                    f'<pre class="transcription">{html.escape(vision_text).replace("|", chr(10))}</pre></details>'
+                )
+            if transcription_parts:
+                transcription_html = f'<div class="transcription-block"><h4 class="block-title">Trascrizione</h4>{"".join(transcription_parts)}</div>'
+            else:
+                transcription_html = ''
+            
             # Licence templates section - generate outside f-string
             commons_tmpl = v.get("commons_templates", [])
             source_tmpl = v.get("source_template", "")
             caveat_tmpl = v.get("caveat_templates", [])
-            if commons_tmpl or source_tmpl or caveat_tmpl:
+            template_candidates = v.get("commons_templates_candidate") or []
+            if commons_tmpl or source_tmpl or caveat_tmpl or template_candidates:
                 licence_items = []
                 for t in commons_tmpl:
                     licence_items.append(f'<li class="licence-tag">{_render_licence_template(t)}</li>')
@@ -1278,6 +1304,13 @@ def _generate_html(verdicts: list[dict], images_base: str | None, ctx: any, run_
                     licence_items.append(f'<li class="licence-tag source">{_render_licence_template(source_tmpl)}</li>')
                 for t in caveat_tmpl:
                     licence_items.append(f'<li class="licence-tag caveat">{_render_licence_template(t)}</li>')
+                # Uncertain verdicts show nature-tailored candidates, never applied
+                for cand in template_candidates:
+                    licence_items.append(
+                        f'<li class="licence-tag candidate">{_render_licence_template(cand.get("template", ""))} '
+                        f'— {html.escape(cand.get("perche", ""))} '
+                        f'<span class="estimate-marker">(candidato, non applicato: verdetto incerto)</span></li>'
+                    )
                 licence_html = f'<div class="licence-block"><h4 class="block-title">Licenze e Template</h4><ul class="licence-list">{"".join(licence_items)}</ul></div>'
             else:
                 licence_html = '<div class="licence-block"><h4 class="block-title">Licenze e Template</h4><p class="no-licence">Nessun template disponibile</p></div>'
@@ -1415,6 +1448,7 @@ def _generate_html(verdicts: list[dict], images_base: str | None, ctx: any, run_
                 </section>
                 {what_to_do_html}
                 {date_html}
+                {transcription_html}
                 <div class="meta-row">
                   <span class="confidence">Confidenza: {_translate_confidence(v.get("confidence"))}</span>
                 </div>
@@ -1478,6 +1512,13 @@ def _generate_html(verdicts: list[dict], images_base: str | None, ctx: any, run_
         {f'<p class="model-registry">{model_registry}</p>' if model_registry else ''}
       </footer>
       <a href="#main" class="back-to-top">Torna su ↑</a>
+      <script>
+        document.addEventListener('keydown', function (event) {{
+          if (event.key === 'Escape' && document.querySelector('.lightbox-overlay:target')) {{
+            window.location.hash = '';
+          }}
+        }});
+      </script>
     </body>
     </html>
     '''

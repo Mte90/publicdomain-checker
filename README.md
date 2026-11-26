@@ -95,7 +95,21 @@ python3 -m pd_checker preflight Concorsi --offline
 
 # crea entità Wikidata per entities_to_create (--live per l'invio, source_url obbligatorio)
 python3 -m pd_checker create-entity Concorsi
+
+# trascrive le scansioni col modello OCR di regolo (--apply scrive ocr_texts nel pacchetto)
+export PD_OCR_API_KEY='…'   # oppure REGOLOAI_OPENCODE_API_KEY
+python3 -m pd_checker ocr Concorsi --apply
 ```
+
+### Trascrizione OCR (`ocr`)
+
+L'estrazione del passo visione trascrive ciò che il modello legge; quando il testo è fitto, piccolo o in parte illegibile, il passo OCR può completarlo. Il comando chiama un endpoint **OpenAI-compatibile** (chat completions con immagine inline) e non è legato a un fornitore: si configura via ambiente e funziona con qualsiasi fornitore compatibile:
+
+- `PD_OCR_API_KEY` — chiave API (fallback: `REGOLOAI_OPENCODE_API_KEY`)
+- `PD_OCR_BASE_URL` — predefinito `https://api.regolo.ai/v1`
+- `PD_OCR_MODEL` — predefinito `deepseek-ocr-2`
+
+Con `--apply` ogni lato finisce nella mappa `ocr_texts` dell'item in facts.json (chiave = nome file, idempotente); la dashboard lo mostra in un pannello separato accanto alla trascrizione visione. Le trascrizioni OCR sono **materiale di revisione, mai fatti legali**: un anno trovato solo dall'OCR lo conferma la persona (`reference_year` + `date_evidence`). Verifica sempre l'output prima di fidarti: un OCR può allucinare dettagli (nomi, date) — se lo fa, non applicarlo (`--apply` resta facoltativo, e senza flag il comando stampa e basta).
 
 Opzioni utili per `run`:
 
@@ -115,7 +129,7 @@ python3 -m pd_checker run <cartella> --images-base .          # base per le mini
 ### Cosa produce lo strumento
 
 - `pubdom.json` — un unico file portabile per cartella: contesto, manifest dei modelli, verdetto di ogni elemento, correlazioni tra serie e manifest di caricamento. Leggibile da solo; il file da consegnare a chi revisiona o da archiviare.
-- `dashboard.html` — una pagina statica (interfaccia in italiano, nessun JavaScript) con il riepilogo dei verdetti, la scheda di ogni elemento, l'evidenza della data, i metadati Wikimedia proposti e le miniature cliccabili.
+- `dashboard.html` — una pagina statica (interfaccia in italiano; unico script: il tasto ESC chiude l'ingrandimento delle immagini) con il riepilogo dei verdetti, la scheda di ogni elemento, l'evidenza della data, i metadati Wikimedia proposti e le miniature cliccabili.
 - I file intermedi vivono in `<cartella>/pd_data/` e sono scratch. `facts.json` è l'eccezione: è l'estrazione scritta dal passo di estrazione dell'agente, non un file da preparare a mano.
 
 ### Livelli di convalida
@@ -182,7 +196,7 @@ Cosa serve — una delle due vie, mai la password dell'account. Nota: il token O
 
 In entrambi i casi: `export PD_WM_CONTACT='tua@email'` — serve per lo User-Agent richiesto dalla policy Wikimedia. Se cambi la password dell'account, la bot password smette di funzionare finché non la rigeneri.
 
-**Cosa carica**: ogni item con `upload.flag = ready` — con la policy `all` anche gli incerti — ma il motivo resta scritto sull'elemento. Ogni item carica TUTTE le sue immagini (fronte + retro): i retro prendono il suffisso « (retro)», i set numerano con « - <n>», il pezzo singolo resta senza indice, e l'annata ( anno di riferimento) è accodata dal tool. Le pagine {{Information}} dei retro sono minime e linkano al fronte.
+**Cosa carica**: ogni item con `upload.flag = ready` — con la policy `all` anche gli incerti — ma il motivo resta scritto sull'elemento. Ogni item carica TUTTE le sue immagini (fronte + retro): i retro prendono il suffisso « (retro)» e l'annata (anno di riferimento) è accodata dal tool. Il nome su Commons descrive il contenuto dell'item: è il campo `content_title` scritto dal passo di estrazione (es. «Locandina Ave Maria - Rieti.png») e deve essere unico nel pacchetto; per gli item senza titolo resta lo schema col prefisso e, nei pacchetti multi-item, l'indice « - <n>». Le pagine {{Information}} dei retro sono minime e linkano al fronte.
 
 Output reale del dry-run sul materiale di esempio:
 

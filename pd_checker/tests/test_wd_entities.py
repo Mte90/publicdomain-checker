@@ -301,7 +301,7 @@ def test_cmd_resolve_live_ambiguous_prints_candidates_and_exits_2(monkeypatch, c
     assert rc == 2
     assert "Ricerca ambigua" in out
     assert "Q1" in out
-    assert "wd_cache.json" in out
+    assert "--confirm" in out
 
 
 def test_cmd_resolve_live_not_found_prints_guidance_and_exits_1(monkeypatch, capsys):

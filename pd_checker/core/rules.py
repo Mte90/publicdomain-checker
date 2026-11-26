@@ -908,7 +908,7 @@ _FACTS_FIELDS = (
     "author_death_year", "is_anonymous", "author_role", "photo_classification", "reference_year",
     "year_source", "visible_text", "visible_text_translation", "visible_text_lang",
     "translation_lang", "has_identifiable_people", "has_handwriting", "vlm_confidence", "set_id", "part", "series_id",
-    "date_evidence", "images", "postmark", "publisher", "is_vatican_asset",
+    "date_evidence", "images", "postmark", "publisher", "is_vatican_asset", "content_title", "ocr_texts", "owner_verdict",
 )
 
 
@@ -1112,6 +1112,50 @@ def _cap_italy_term(italy: dict, origin: dict, origin_country: str, current_year
             ]
 
 
+def _candidate_templates(item: dict) -> list[dict]:
+    """Per-nature licence candidates for an uncertain verdict (review suggestions only).
+
+    The mapping mirrors the licence table applied on public_domain and never
+    proposes tags for correspondence (Art. 93) or for countries without an
+    encoded table (non-IT). Each suggestion carries the missing datum in
+    `perche` so the dashboard shows an actionable hint, never an applied tag.
+    """
+    country = item.get("country_of_origin")
+    if isinstance(country, str) and country.upper() != "IT":
+        return []
+    doc_type = (item.get("document_type") or "").lower()
+    photo_class = item.get("photo_classification")
+    role = item.get("author_role")
+    if doc_type == "photo":
+        if photo_class == "simple":
+            return [{"template": "{{PD-Italy}}", "perche": "foto semplice: serve la data di produzione per il verdetto"}]
+        if photo_class == "artistic":
+            if item.get("is_anonymous") or role in ("printer", "publisher"):
+                return [{"template": "{{PD-anon-70-EU}}", "perche": "foto artistica anonima: serve la data di prima pubblicazione (70 anni)"}]
+            return [{"template": "{{PD-old-70}}", "perche": "opera artistica: serve l'anno di morte dell'autore (vita + 70)"}]
+        return [{"template": "{{PD-Italy}}", "perche": "fotografia non classificata: rivedere foto semplice vs artistica e la data"}]
+    if doc_type in ("letter", "manuscript"):
+        # Official texts of public bodies (military command permit, municipal
+        # letter, state invitation): Art. 5 L.633/1941 excludes them from
+        # copyright — candidates still require a human nature confirmation.
+        if item.get("rights_holder") == "public_body":
+            return [
+                {"template": "{{PD-Italy-EdictGov}}", "perche": "documento ufficiale di corpo pubblico (militare, comunale, statale — Art. 5 L.633/1941): da confermarne la natura di atto ufficiale in revisione"},
+                {"template": "{{PD-ItalyGov}}", "perche": "alternativa per opera della Pubblica Amministrazione (Art. 11): se non è atto ufficiale vale il termine delle opere di corpo pubblico"},
+            ]
+        return []
+    if item.get("is_anonymous") or role in ("printer", "publisher") or doc_type in ("newspaper", "magazine"):
+        # Owner review choice: anonymous Italian printed works show BOTH the
+        # country-specific tag and the community one as alternatives to pick from.
+        return [
+            {"template": "{{PD-Italy}}", "perche": "opera anonima a stampa italiana (Art. 27): serve l'anno di prima pubblicazione (70 anni)"},
+            {"template": "{{PD-anon-70-EU}}", "perche": "alternativa comunitaria per le stesse condizioni (il tag Paese resta quello scelto in revisione)"},
+        ]
+    if item.get("author"):
+        return [{"template": "{{PD-old-70}}", "perche": "opera con autore indicato: serve l'anno di morte (vita + 70)"}]
+    return []
+
+
 def evaluate(item: dict, current_year: int, upload_policy: str = UPLOAD_POLICY_STRICT) -> dict:
     verdict = _base(item)
     origin_country = verdict["country_of_origin"]
@@ -1175,10 +1219,19 @@ def evaluate(item: dict, current_year: int, upload_policy: str = UPLOAD_POLICY_S
 
     # A licence tag asserts a legal basis we do not hold while the verdict is uncertain.
     if verdict["status"] == UNCERTAIN and verdict["commons_templates"]:
+        # Branch-computed tags survive as review candidates, never applied while uncertain.
+        verdict["commons_templates_candidate"] = [
+            {"template": template, "perche": "calcolato dal ramo di regole, non applicato perche' il verdetto e' incerto"}
+            for template in verdict["commons_templates"]
+        ]
         verdict["commons_templates"] = []
         verdict["notes"] = verdict["notes"] + [
             "Tag di pubblico dominio non emessi: il verdetto e' incerto."
         ]
+    elif verdict["status"] == UNCERTAIN:
+        candidates = _candidate_templates(item)
+        if candidates:
+            verdict["commons_templates_candidate"] = candidates
     
     # Cap confidence when reference_year is set but year_source is visual_estimate.
     # For a simple photo judged under the 20-year no-revival term (production <=2004)
@@ -1201,6 +1254,34 @@ def evaluate(item: dict, current_year: int, upload_policy: str = UPLOAD_POLICY_S
                 "Anno stimato visivamente: la confidenza e' limitata."
             ]
     
+    # Explicit public-domain declaration by the archive owner: the human
+    # decision IS the datum (review loop: "the human decides, the agent
+    # executes"). No term is computed — the declaration is the basis and the
+    # provenance stays written in reason and notes for every regeneration.
+    declared = item.get("owner_verdict")
+    if isinstance(declared, dict) and declared.get("template"):
+        verdict["status"] = PUBLIC_DOMAIN
+        verdict["confidence"] = "medium"
+        verdict["pd_year"] = None
+        verdict["years_until_pd"] = None
+        verdict["commons_templates"] = [declared["template"]]
+        verdict["commons_templates_candidate"] = []
+        verdict["reason"] = (
+            f"Pubblico dominio dichiarato dal proprietario dell'archivio: "
+            f"{declared.get('basis', 'dichiarazione esplicita del proprietario')}"
+        )
+        verdict["legal_basis"] = sorted(
+            set(verdict.get("legal_basis", [])) | {"dichiarazione esplicita del proprietario (revisione umana)"}
+        )
+        verdict["notes"] = verdict.get("notes", []) + [
+            "Verdetto fondato sulla dichiarazione del proprietario, non su un anno leggibile dall'oggetto: la data resta da confermare.",
+            "{{PD-1996}} non allegato: senza anno di pubblicazione l'idoneita' URAA non e' provabile.",
+        ]
+        verdict["missing_data"] = [
+            m for m in verdict.get("missing_data", []) if "tipo di documento" not in m.lower()
+        ]
+        verdict["human_review_required"] = bool(verdict["blockers_non_copyright"])
+
     # Compute upload flag and reason (advisory for manual review, never automatic trigger)
     _set_upload_flag(verdict, upload_policy)
     

@@ -13,13 +13,14 @@ Non chiama mai un modello per decidere la legge, e non inventa mai un identifica
 Sette moduli. I cinque moduli di libreria vivono in `core/`; `python3 -m pd_checker` è l'unica superficie di comando.
 
 - `__init__.py` — superficie del pacchetto. riesporta `evaluate`, `evaluate_many`, le tre costanti di stato e `RULE_TABLE_VERSION`.
-- `__main__.py` — l'unica riga di comando (12 sottocomandi), l'orchestrazione del pipeline e il cancello di preflight.
+- `__main__.py` — l'unica riga di comando (14 sottocomandi), l'orchestrazione del pipeline e il cancello di preflight.
 - `core/rules.py` — il valutatore deterministico: termini per paese più orchestrazione del motore. La sua docstring cita ogni fonte legale, articolo per articolo.
 - `core/catalogs.py` — i quattro cataloghi Wikimedia e la verifica live via API, dietro un'unica costante `DATA_DIR`.
 - `core/context.py` — contesto della cartella (provenienza, detentore dei diritti, paese, periodo), il suggerimento del paese da segnali di lingua e luogo, e la correlazione tra serie.
 - `core/wikidata.py` — costruisce le dichiarazioni Wikidata, la lista delle categorie e il manifest di caricamento a partire da verdetti e contesto.
-- `core/report.py` — genera la dashboard HTML statica di revisione (interfaccia in italiano, nessun JavaScript).
+- `core/report.py` — genera la dashboard HTML statica di revisione (interfaccia in italiano; unico script: il tasto ESC chiude l'ingrandimento delle immagini).
 - `core/push.py` — l'invio a Commons via API: dry-run di default, credenziali solo da variabili d'ambiente, mai sovrascrive file esistenti.
+- `core/ocr.py` — la trascrizione OCR dei lati via endpoint OpenAI-compatibile (default deepseek-ocr-2 via regolo, tutto configurabile via ambiente); `ocr --apply` scrive `ocr_texts` nel pacchetto.
 
 ## File di dati
 

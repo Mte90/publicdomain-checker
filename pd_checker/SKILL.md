@@ -144,9 +144,11 @@ python3 -m pd_checker <subcommand>
 | `validate <folder>` | Check templates and entities in `verdicts.json` (offline) | No |
 | `preflight <folder> [--offline]` | Validate upload package before Commons upload (SHA1, duplicates, completeness) | Yes (default), No with `--offline` |
 | `push <folder> [--live] [--filename-prefix PREFIX]` | Upload ready items to Wikimedia Commons | No (dry-run), Yes with `--live` |
+| `ocr <folder> [--file NAME]... [--apply]` | OCR transcription of the folder's scans via the regolo OCR endpoint (default `deepseek-ocr-2`, env-configured); `--apply` writes `ocr_texts` into facts.json | Yes |
+| `suggest-country [--language CODE] [--text TEXT] [--postmark TEXT] [--publisher TEXT]` | Ranked candidate jurisdictions from language/place/publisher evidence (the deterministic engine applies the same suggestions automatically when the country is undeclared) | No |
 | `verify-live <folder>` | Verify templates live against Commons API | Yes |
 | `update` | Refresh Commons template and Wikidata entity catalogs | Yes |
-| `resolve <name> [--live]` | Cache-first entity resolution; `--live` searches Wikidata with an exact-match guard and caches the outcome (found / not_found / ambiguous) | `--live` only |
+| `resolve <name> [--live] [--confirm QID]` | Cache-first entity resolution; `--live` searches Wikidata with an exact-match guard and caches the outcome (found / not_found / ambiguous); `--confirm` caches a human-confirmed QID after candidate review (fetches labels live, refuses invalid/missing QIDs) | `--live`/`--confirm` |
 | `create-entity <folder> [--live]` | Create Wikidata items for entities_to_create (source gate: no source_url → skipped; P31 validation against catalog) | `--live` only |
 | `templates-enrich` | Enrich template catalog with category metadata (network) | Yes |
 | `templates-suggest` | Suggest templates by country/anonymous/restrictions (offline) | No |
@@ -200,6 +202,7 @@ The package is seven modules; the library ones are internal steps run by the pip
 - `context.py` — folder context, country suggestion and series correlation.
 - `wikidata.py` — Commons/Wikidata statement building.
 - `report.py` — dashboard generation.
+- `ocr.py` — the regolo OCR transcription script (writes `ocr_texts`).
 - `__main__.py` — the CLI, the pipeline orchestration and the upload preflight.
 
 Import them directly instead of shelling out, e.g. `from pd_checker import rules`.
@@ -275,15 +278,17 @@ The preflight exists so a human can see, before publishing, exactly what would b
 
 ## Naming Commons files
 
-**upload_prefix describes the CONTENT (subject/event/series) — never the folder name. The tool appends the annata (the item's operative reference year) automatically at derivation time.**
+**Every item gets a content-themed Commons filename, authored by the extraction step as `content_title` in facts.json. The name answers “what IS this file” — never “which folder does it come from”. The tool appends the annata (the item's operative reference year) automatically at derivation time.**
 
-- **Single-item folders**: `<prefix> <year>.png` and `<prefix> <year> (retro).png` (no numeric index).
-- **Multi-item folders**: `<prefix> <year> - <n>.png` / `<prefix> <year> - <n> (retro).png`.
+- **Content formula** (when `content_title` is set): `<content_title> <year>.png` and `<content_title> <year> (retro).png`. The `upload_prefix` is NOT glued to a content-titled name.
 - **No reference year**: the year part is simply omitted — never an empty gap.
 - **Retro sides**: always get the ` (retro)` suffix and their own minimal page, cross-linked via `other_versions`.
-- **Consistency**: if a collection may grow, number from the start (` - 1`, ` - 2`, ...).
+- **Uniqueness**: `content_title` values MUST be unique within the package — they are the filename stems. `push` refuses an item whose derived name duplicates an earlier item's (`[RIFIUTATO] … content_title deve essere unico nel pacchetto`): fix the title in facts.json, never let two files share a stem.
+- **Writing good titles**: name the specific subject first — document type + issuer/protagonist, or the depicted event (“Tessera di riconoscimento militare Vecchiarelli”, “Invito Quirinale celebrazioni Mazzini”, “Locandina "Ave Maria" - Rieti”). Keep it short (≤ 60 characters); plain letters, digits, spaces, hyphens; Italian; unique per package.
 
-**upload_prefix derivation**:
+**upload_prefix is the legacy fallback**, used only for items WITHOUT a `content_title`:
+- **Single-item folders**: `<prefix> <year>.png` and `<prefix> <year> (retro).png` (no numeric index).
+- **Multi-item folders**: `<prefix> <year> - <n>.png` / `<prefix> <year> - <n> (retro).png` — if a collection may grow, number from the start.
 - Prefer a descriptive name from the content (e.g., `Concorso Vittoria del Grano` from the collection title)
 - Never use the bare folder name (meaningless)
 - Do NOT put the year inside upload_prefix — the tool appends the annata from the item's operative reference year (estimates included); the page's date evidence documents the confidence
@@ -354,8 +359,9 @@ python3 -m pd_checker create-entity <folder> --live
 The dashboard is the human's review surface. Every "Cosa fare adesso" action maps to something the agent can execute — when the human raises it, answer with the matching action, never by hand-editing verdicts:
 
 - "Conferma la data" — re-inspect the scan, correct `reference_year` / `year_source` in `pd_data/facts.json`, re-run. Only a year printed on the item (text, postmark) may decide a boundary.
-- "resolve «nome» --live" — run `python3 -m pd_checker resolve "<name>" --live`. A found QID is cached and the next `run` turns the statement `ok`. Not found (exit 1) means the item does not exist on Wikidata: leave the statement QID-less (the name stays in the wikitext) or the human creates the item with a source and re-resolves. Ambiguous (exit 2) means the top Wikidata hits do not coincide with the name: the candidates are printed for the human to confirm — never auto-cache a weak match.
+- "resolve «nome» --live" — run `python3 -m pd_checker resolve "<name>" --live`. A found QID is cached and the next `run` turns the statement `ok`. Not found (exit 1) means the item does not exist on Wikidata: leave the statement QID-less (the name stays in the wikitext) or the human creates the item with a source and re-resolves. Ambiguous (exit 2) means the top Wikidata hits do not coincide with the name: the candidates are printed for the human to confirm — never auto-cache a weak match; cache the human-confirmed QID with `resolve "<name>" --confirm <QID>` (the only sanctioned write after review, fetches labels live).
 - "Dichiara il paese" — add `country_of_origin` to `pd_data/context.json`, re-run.
+- "Il proprietario li dichiara PD" — record the declaration per item in facts (`owner_verdict`, template + basis with date), re-run: the engine applies it as a `public_domain` verdict with full provenance. The review surface keeps showing what the declaration is — and what it is not: a date confirmation remains open, and PD-1996 is not attached without a provable publication year.
 - Non-copyright blockers (Art. 93 correspondence, portrait rights, privacy) — human decision only. Never override, never upload past a blocker under `strict`.
 - "Pronto al caricamento" — propose `push` (dry-run is the default); `--live` only on the owner's explicit go.
 
@@ -472,9 +478,52 @@ python3 -m pd_checker push Cardinale-Del-Val --live --filename-prefix "Merry del
 
 **Empty country fallback**: If a country code has no specific templates (e.g., VA for Vatican), the command prints a clear message and lists generic fallbacks (PD-old-70 for old works, PD-anon-70-EU for anonymous/EU works) instead of "Candidates (0)".
 
+## OCR transcription (regolo deepseek-ocr-2)
+
+Extraction transcribes what the vision model reads; when text is dense, tiny or
+partly illegible, the OCR model completes it. The `ocr` subcommand calls an
+OpenAI-compatible chat endpoint with the image inline:
+
+```bash
+# Transcribe every scan claimed by facts.json (prints each transcription)
+python3 -m pd_checker ocr Varie
+
+# Only specific sides
+python3 -m pd_checker ocr Varie --file 2_fronte.png --file 2_retro.png
+
+# Write the transcriptions back into the package
+python3 -m pd_checker ocr Varie --apply
+```
+
+Configuration is environment-only (same policy as the Wikimedia credentials):
+
+- `PD_OCR_API_KEY` — required (falls back to `REGOLOAI_OPENCODE_API_KEY`)
+- `PD_OCR_BASE_URL` — default `https://api.regolo.ai/v1`
+- `PD_OCR_MODEL` — default `deepseek-ocr-2`
+
+With `--apply`, each side's transcription lands in the owning item's
+`ocr_texts` map (keyed by image basename; re-runs overwrite per file,
+idempotent). Record the model in the run manifest for the dashboard's
+"Modelli e riferimenti" panel: if `run.json` was already filed into
+`pd_data/`, write it back at the folder root first — the pipeline re-reads
+that copy and files it again:
+
+```json
+{"role": "Trascrizione OCR", "provider": "regolo", "model": "deepseek-ocr-2"}
+```
+
+OCR transcriptions are REVIEW EVIDENCE, never legal facts: a year that only
+OCR surfaces is promoted by the human (`reference_year` + `date_evidence`),
+not by the engine. The Commons description prefers the front side's OCR
+transcription (full text); the dashboard shows every side's OCR plus the
+vision transcription, both complete.
+
 ## Facts schema (input)
 
 - `file` (str), `document_type` (`photo|postcard|letter|newspaper|magazine|manuscript|unknown`)
+- `content_title` (str|null): content-themed Commons filename stem authored by the extraction step — answers “what IS this file” (see “Naming Commons files”); unique within the package; edited in review like `reference_year`
+- `ocr_texts` (object|null): per-side OCR transcriptions written by `ocr --apply`, keyed by image basename; review evidence, never a source of legal facts
+- `owner_verdict` (object|null): the archive owner's explicit public-domain declaration — `{"template": "{{PD-Italy}}", "basis": "dichiarazione del proprietario (YYYY-MM-DD): …"}`. The engine applies it as the decision: status `public_domain`, the chosen template, provenance written in reason and notes; the term is NOT computed, the «tipo di documento» missing-data entry is cleared; non-copyright blockers (Artt. 93/96-97) stay. The human's word is the datum — the agent only records it, never drafts one itself.
 - `country_of_origin` (`IT|GB|VA`, default `IT`)
 - `author` (str|null), `author_nationality` (str|null), `author_death_year` (int|null)
 - `author_role` (`photographer|illustrator|printer|publisher`|null): role of the person/firm named in `author`; absent means unknown
@@ -492,7 +541,9 @@ python3 -m pd_checker push Cardinale-Del-Val --live --filename-prefix "Merry del
 ## Verdict schema (output)
 
 `status` (`public_domain|not_public_domain|uncertain`), `confidence`, `reason`,
-`legal_basis`, `commons_templates`, `commons_categories`, `missing_data`,
+`legal_basis`, `commons_templates`, `commons_templates_candidate` (nature-tailored
+licence suggestions for the human — present only on uncertain verdicts, never
+applied), `commons_categories`, `missing_data`,
 `pd_year`, `years_until_pd`, `human_review_required`, `blockers_non_copyright`,
 `notes`, `rule_table_version`, `country_of_origin`, `shorter_term_applied`,
 `jurisdictions` (`{origin: {...}, italy: {...}}`), `extracted_facts`.
@@ -550,6 +601,9 @@ python3 -m pd_checker resolve "Grafiche Baroni - Milano" --live
 - `lookup(name)` → OFFLINE, cache-only (no network, no side effects)
 - `resolve(name, live=False)` → cache-first; if absent returns None WITHOUT creating an entry
 - `resolve(name, live=True)` → cache-first; if absent calls Wikidata API `wbsearchentities` with proper User-Agent, stores result, returns QID or None
+- **Ambiguous → `--confirm`**: after the human reviews the printed candidates, `resolve "<name>" --confirm <QID>` is the ONLY sanctioned cache write — it fetches it/en labels live and refuses invalid or nonexistent QIDs
+
+**P180 "raffigura" mining**: on every `run`, cached names appearing in an item's `visible_text` automatically become P180 depicts statements (the theatre, the issuer, the composers…). Ordinary words are stoplisted (`circa`). This is what makes the verification pass pay off: curate the people and places named in the transcriptions, `resolve "<name>" --live` each (pace the calls — Wikidata rate-limits), report found/absent with labels AND descriptions to the human (a bare-surname item described «cognome / family name» is NOT the person), `--confirm` the human-approved QIDs, then `run` — the statements flip to `ok`.
 - **Never hand-write a QID** without a cache entry — the guard in `wikidata.py` drops any qid that is not in the cache and marks that statement `da_rivedere`.
 
 ### Extraction contract: `author_role`
@@ -606,6 +660,18 @@ shorter term (Art. 188): they are protected in Italy no longer than at origin.
 ## Commons templates (real, verified templates)
 
 ### Licence templates
+
+When a verdict is UNCERTAIN, no licence tag is emitted; the dashboard instead
+shows `commons_templates_candidate` — per-document-nature suggestions with
+the missing datum named (e.g. `{{PD-Italy}}` for a simple photo awaiting its
+production year). Anonymous Italian printed works show BOTH `{{PD-Italy}}`
+and `{{PD-anon-70-EU}}` as alternatives — two framings of the same 70-year
+anonymous-term conclusion; the human picks at review. Official documents of
+public bodies (military command, municipality, state: permit, letter,
+invitation) suggest the `{{PD-Italy-EdictGov}}` / `{{PD-ItalyGov}}` pair —
+Art. 5 L.633/1941 excludes official texts from copyright, but the "official
+act" nature stays a human confirmation. A candidate is never applied by the
+tool.
 
 | Case | Templates | Reason |
 |------|-----------|--------|

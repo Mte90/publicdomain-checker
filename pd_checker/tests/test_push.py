@@ -378,6 +378,32 @@ class TestFilenameDerivation:
         filename = push.derive_filename(sample_item, "Zeta", 2, 4)
         assert filename == "Zeta - 2.jpg"
 
+    def test_derive_filename_content_title_with_year(self, sample_item):
+        """Content-themed naming: the title IS the filename stem, annata appended."""
+        sample_item["extracted_facts"]["content_title"] = "Invito Quirinale celebrazioni Mazzini"
+        sample_item["extracted_facts"]["reference_year"] = 1949
+        filename = push.derive_filename(sample_item, "Archivio Vecchiarelli", 1, 8)
+        assert filename == "Invito Quirinale celebrazioni Mazzini 1949.jpg"
+
+    def test_derive_filename_content_title_no_year(self, sample_item):
+        """Content title without a reference year omits the annata — no gap."""
+        sample_item["extracted_facts"]["content_title"] = "Locandina Ave Maria - Rieti"
+        filename = push.derive_filename(sample_item, "Any Prefix", 3, 8)
+        assert filename == "Locandina Ave Maria - Rieti.jpg"
+
+    def test_derive_filename_content_title_ignores_prefix(self, sample_item):
+        """The legacy prefix is not glued to a content-titled name."""
+        sample_item["extracted_facts"]["content_title"] = "Tessera militare Vecchiarelli"
+        sample_item["reference_year"] = None
+        filename = push.derive_filename(sample_item, "Archivio", 1, 1)
+        assert filename == "Tessera militare Vecchiarelli.jpg"
+
+    def test_derive_filename_empty_content_title_falls_back(self, sample_item):
+        """Empty/whitespace content_title falls back to the legacy prefix scheme."""
+        sample_item["extracted_facts"]["content_title"] = "   "
+        filename = push.derive_filename(sample_item, "Zeta", 2, 4)
+        assert filename == "Zeta - 2.jpg"
+
 
 # =============================================================================
 # Dry-run tests
@@ -1141,6 +1167,55 @@ class TestNoLicenseCheck:
         # Check exit code (should be 0 for dry-run success)
         assert result == 0
     
+    def test_push_refuses_duplicate_content_titles(self, tmp_path, capsys):
+        """Items sharing a derived Commons name are refused loudly; the plan shows themed names."""
+        folder = tmp_path / "test_dup"
+        folder.mkdir()
+        (folder / "a.png").write_bytes(b"front1")
+        (folder / "b.png").write_bytes(b"front2")
+
+        def make_item(filename):
+            return {
+                "file": filename,
+                "status": "public_domain",
+                "confidence": 0.95,
+                "upload": {"flag": "ready", "reason": []},
+                "information": {
+                    "description": "Test image",
+                    "date": "1931",
+                    "source": "Scansione dalla collezione di Daniele Scasciafratte",
+                    "author": "Unknown"
+                },
+                "commons_templates": ["{{PD-Italy}}"],
+                "commons_categories": ["Test category"],
+                "extracted_facts": {
+                    "images": [filename],
+                    "content_title": "Locandina Ave Maria",
+                    "reference_year": 1931,
+                },
+                "source_template": "{{Self-scanned}}",
+                "caveat_templates": []
+            }
+
+        pubdom = {
+            "folder": "test_dup",
+            "generated": "2024-01-15",
+            "items": [make_item("test_dup/a.png"), make_item("test_dup/b.png")],
+        }
+        (folder / "pubdom.json").write_text(json.dumps(pubdom))
+
+        test_args = ["push", str(folder)]
+        with patch.object(push.sys, "argv", test_args):
+            result = push.cmd_push(test_args[1:], live=False)
+
+        captured = capsys.readouterr()
+        # Second claimant of the same derived name is refused; first wins
+        assert captured.out.count("RIFIUTATO") == 1
+        assert "content_title deve essere unico nel pacchetto" in captured.out
+        # The surviving item is planned under its content-themed name
+        assert "[DRY-RUN] Locandina Ave Maria 1931.png" in captured.out
+        assert result == 0
+    
     def test_push_refuses_multiple_reasons_same_item(self, tmp_path, capsys):
         """Push refuses items with multiple Commons acceptance failures."""
         # Create folder structure
@@ -1191,3 +1266,47 @@ class TestNoLicenseCheck:
         
         # Check exit code
         assert result == 1
+
+
+# =============================================================================
+# Pre-check batch parsing (regression: negative pageids)
+# =============================================================================
+
+class _FakeResponse:
+    def __init__(self, payload):
+        self._payload = payload
+
+    def read(self):
+        return json.dumps(self._payload).encode()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+
+class _FakeOpener:
+    def __init__(self, payload):
+        self.payload = payload
+
+    def open(self, req, timeout=None):
+        return _FakeResponse(self.payload)
+
+
+def test_check_existing_files_negative_pageids_are_missing():
+    """MediaWiki batch queries number MISSING pages -1, -2, -3…: only the 'missing' flag is existence evidence."""
+    payload = {
+        "query": {
+            "pages": {
+                "-1": {"ns": 6, "title": "File:A.png", "missing": ""},
+                "-2": {"ns": 6, "title": "File:B.png", "missing": ""},
+                "-3": {"ns": 6, "title": "File:C.png", "missing": ""},
+                "12345": {"ns": 6, "title": "File:D.png", "imageinfo": [{"sha1": "abc"}]},
+            }
+        }
+    }
+    existing = push._check_existing_files(
+        _FakeOpener(payload), ["A.png", "B.png", "C.png", "D.png"], {"contact": "test"}
+    )
+    assert existing == {"D.png"}

@@ -86,13 +86,6 @@
       "result": "ok",
       "checked": "2026-11-20"
     },
-    "circa": {
-      "qid": "Q5727902",
-      "label_it": "circa",
-      "label_en": "circa",
-      "result": "ok",
-      "checked": "2026-11-20"
-    },
     "Sansaini": {
       "qid": null,
       "label_it": "Sansaini",
@@ -126,6 +119,118 @@
       "label_it": "Grafiche Baroni - Milano",
       "label_en": "Grafiche Baroni - Milano",
       "result": "not_found",
+      "checked": "2026-11-26"
+    },
+    "Carlo Weinberger": {
+      "qid": "Q114341",
+      "label_it": "Karl Weinberger",
+      "label_en": "Charles Weinberger",
+      "result": "ok",
+      "checked": "2026-11-26"
+    },
+    "Leo Fall": {
+      "qid": "Q78585",
+      "label_it": "Leo Fall",
+      "label_en": "Leo Fall",
+      "result": "ok",
+      "checked": "2026-11-26"
+    },
+    "Giuseppe Mazzini": {
+      "qid": "Q187336",
+      "label_it": "Giuseppe Mazzini",
+      "label_en": "Giuseppe Mazzini",
+      "result": "ok",
+      "checked": "2026-11-26"
+    },
+    "Raimondo Sarnella": {
+      "qid": null,
+      "label_it": "Raimondo Sarnella",
+      "label_en": "Raimondo Sarnella",
+      "result": "not_found",
+      "checked": "2026-11-26"
+    },
+    "F.lli Faraoni": {
+      "qid": null,
+      "label_it": "F.lli Faraoni",
+      "label_en": "F.lli Faraoni",
+      "result": "not_found",
+      "checked": "2026-11-26"
+    },
+    "Teatro Flavio Vespasiano": {
+      "qid": "Q3981982",
+      "label_it": "Teatro Flavio Vespasiano",
+      "label_en": "Teatro Flavio Vespasiano",
+      "result": "ok",
+      "checked": "2026-11-26"
+    },
+    "Rieti": {
+      "qid": "Q13396",
+      "label_it": "Rieti",
+      "label_en": "Rieti",
+      "result": "ok",
+      "checked": "2026-11-26"
+    },
+    "Greccio": {
+      "qid": "Q224144",
+      "label_it": "Greccio",
+      "label_en": "Greccio",
+      "result": "ok",
+      "checked": "2026-11-26"
+    },
+    "Palazzo del Quirinale": {
+      "qid": "Q223079",
+      "label_it": "palazzo del Quirinale",
+      "label_en": "Quirinal Palace",
+      "result": "ok",
+      "checked": "2026-11-26"
+    },
+    "Comando Divisione Territoriale di Roma": {
+      "qid": null,
+      "label_it": "Comando Divisione Territoriale di Roma",
+      "label_en": "Comando Divisione Territoriale di Roma",
+      "result": "not_found",
+      "checked": "2026-11-26"
+    },
+    "Municipio di Rieti": {
+      "qid": "Q134679322",
+      "label_it": "Municipio di Rieti",
+      "label_en": "Town hall of Rieti",
+      "result": "ok",
+      "checked": "2026-11-26"
+    },
+    "Presidenza della Repubblica": {
+      "qid": "Q15191779",
+      "label_it": "presidenza della Repubblica Italiana",
+      "label_en": "Presidency of the Italian Republic",
+      "result": "ok",
+      "checked": "2026-11-26"
+    },
+    "94º Reggimento fanteria": {
+      "qid": "Q3600191",
+      "label_it": "94º Reggimento fanteria \"Messina\"",
+      "label_en": "94º Reggimento fanteria \"Messina\"",
+      "result": "ok",
+      "checked": "2026-11-26"
+    },
+    "2º Reggimento bersaglieri": {
+      "qid": "Q3598750",
+      "label_it": "2º Reggimento bersaglieri",
+      "label_en": "2nd Bersaglieri Regiment",
+      "result": "ok",
+      "checked": "2026-11-26"
+    },
+    "Regina del Fonografo": {
+      "qid": null,
+      "label_it": "Regina del Fonografo",
+      "label_en": "Regina del Fonografo",
+      "result": "not_found",
+      "checked": "2026-11-26"
+    },
+    "MUNICIPIO DI RIETI": {
+      "qid": "Q134679322",
+      "label_it": "Municipio di Rieti",
+      "label_en": "Town hall of Rieti",
+      "result": "ok",
       "checked": "2026-11-26"
     }
   }

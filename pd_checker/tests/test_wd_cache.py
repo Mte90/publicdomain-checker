@@ -219,3 +219,41 @@ class MockResponse:
 def __mock_response__(data):
     """Factory for mock response."""
     return MockResponse(data)
+# =============================================================================
+# cache_confirmed (resolve --confirm)
+# =============================================================================
+
+import io
+
+
+def _fake_urlopen(payload):
+    def fake(req, timeout=30):
+        return io.BytesIO(json.dumps(payload).encode())
+    return fake
+
+
+def test_cache_confirmed_writes_ok_entry(temp_cache_dir, monkeypatch):
+    payload = {"entities": {"Q123456": {"labels": {"it": {"value": "Teatro Esempio"}, "en": {"value": "Example Theatre"}}}}}
+    monkeypatch.setattr(wd_cache, "urlopen", _fake_urlopen(payload))
+    outcome = wd_cache.cache_confirmed("Teatro Esempio", "Q123456")
+    assert outcome["status"] == "ok"
+    assert wd_cache.lookup("Teatro Esempio") == "Q123456"
+    cache = wd_cache._load_wd_cache()
+    assert cache["names"]["Teatro Esempio"]["label_it"] == "Teatro Esempio"
+    assert cache["names"]["Teatro Esempio"]["label_en"] == "Example Theatre"
+
+
+def test_cache_confirmed_rejects_invalid_qid(temp_cache_dir):
+    outcome = wd_cache.cache_confirmed("Nome", "Q12x")
+    assert outcome["status"] == "invalid"
+    cache = wd_cache._load_wd_cache()
+    assert "Nome" not in cache["names"]
+
+
+def test_cache_confirmed_rejects_missing_entity(temp_cache_dir, monkeypatch):
+    payload = {"entities": {"Q999999999": {"missing": ""}}}
+    monkeypatch.setattr(wd_cache, "urlopen", _fake_urlopen(payload))
+    outcome = wd_cache.cache_confirmed("Nome", "Q999999999")
+    assert outcome["status"] == "not_found"
+    cache = wd_cache._load_wd_cache()
+    assert "Nome" not in cache["names"]
