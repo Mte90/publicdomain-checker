@@ -197,12 +197,28 @@ def _home_pd_by_1996(facts: dict, photo_class: str, ref_year: int) -> tuple[bool
         - eligible: True if the work was already PD in its home country on 1996-01-01
         - evidence: Italian explanation string for the verdict notes
     """
+    country = (facts.get("country_of_origin") or "").upper()
+    is_anon = bool(facts.get("is_anonymous"))
+    
+    # GB pre-1957 anonymous photographs: special URAA boundary
+    # 1956 Act s.3(4)(b): 50y from first publication; 1995 Regs reg.16(d) revived only works
+    # still protected in an EEA state on 1 Jul 1995. For unknown-author photos, Directive term
+    # (70y from making) means EEA-protection on 1/7/1995 only for works made >=1925.
+    # Consequence at URAA date (1/1/1996): made <=1925 -> UK-PD; made 1926-1956 -> UK-protected.
+    if country == "GB" and is_anon and photo_class in ("simple", "artistic", "unclear") and ref_year < 1957:
+        if ref_year <= 1925:
+            # expired 31/12/1960 under 1956 Act; not revived (EEA-expired) -> UK-PD at URAA
+            return True, "GB foto anonima pre-1957 (1956 Act 50y dalla pubbl.): scaduta 31/12/1960, non ripresa (EEA-PD)"
+        else:
+            # 1926-1956: still UK-protected on 1/1/1996 (old term or revived to making+70)
+            return False, "GB foto anonima 1926-1956: protetta al 1/1/1996 (termine 1956 Act o ripresa 1995)"
+    
     if photo_class == "simple":
         # photographs: 20 years from production (Art. 92 as then in force)
         expiry = ref_year + 20
         return expiry <= 1996, f"termine ventennale scaduto nel {expiry}"
     
-    if facts.get("is_anonymous"):
+    if is_anon:
         # anonymous/pseudonymous non-photographic: 50 years from first publication (Art. 27 pre-reform)
         expiry = ref_year + 50
         return expiry <= 1996, f"termine cinquantennale anonimo scaduto nel {expiry}"
@@ -745,14 +761,18 @@ def _gb(facts: dict, current_year: int) -> dict:
                            templates=["{{PD-old-70}}"], confidence=_worst("high", vlm))
         if ref_year is not None and (is_anon or holder in ("company", "public_body")):
             if ref_year < 1957:
-                # UK CDPA 1988 s.12(3) (not s.12(2), which is life+70): UNKNOWN authorship
-                # is PD 70 years from end of year of creation; pre-1957 photographs' 50-year
-                # term (1911 Act s.21, preserved by Sch.1 para 12(2)(c)) expired 31 Dec 1960.
-                # Therefore a UK photo taken in 1910 with unknown author IS PD in 2026.
+                # UK CDPA 1988 Sch.1 para 12(2)(c) defers to 1956 Act s.3(4)(b) for pre-1957 photos:
+                # 50 years from first publication (NOT from making). The 1995 Regs reg.16(d) revived
+                # UK copyright only for works still EEA-protected on 1 Jul 1995. For anonymous photos,
+                # the Directive term (70y from making) means EEA-protection on 1/7/1995 only for
+                # works made >=1925. Consequence at URAA date (1/1/1996): made<=1925 -> UK-PD;
+                # made 1926-1956 -> UK-protected (old term or revived to making+70).
                 pd_year = _pd_year(ref_year, 50)
                 result = _result(pd_year=pd_year, legal_basis=[_CDPA_SCH1], notes=notes)
-                templates, us_status, evidence_note = _apply_uraa_condition(["{{PD-anon-70}}", "{{PD-1996}}"], pd_year, current_year, facts, None, ref_year)
+                photo_class = facts.get("photo_classification", "unclear")
+                templates, us_status, evidence_note = _apply_uraa_condition(["{{PD-anon-70}}", "{{PD-1996}}"], pd_year, current_year, facts, photo_class, ref_year)
                 if us_status:
+                    result["us_status"] = us_status
                     result["notes"].append((f"Copyright negli Stati Uniti ripristinato dall'URAA (opera ancora protetta nel paese d'origine "
                                            f"al 1° gennaio 1996): PD USA previsto dal {us_status['restored_until']}."))
                 elif evidence_note:

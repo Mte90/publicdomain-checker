@@ -278,6 +278,42 @@ class TestWikitextAssembler:
         sample_item["extracted_facts"]["author_role"] = ""  # No explicit role
         wikitext = push.build_wikitext(sample_item)
         assert "|author={{unknown|author}}" in wikitext
+    
+    def test_build_wikitext_default_tracking_category(self, sample_item):
+        """Default build_wikitext contains tracking category."""
+        wikitext = push.build_wikitext(sample_item)
+        assert "[[Category:Uploaded with pd-checker]]" in wikitext
+    
+    def test_build_wikitext_no_tracking_category(self, sample_item):
+        """--no-tracking omits tracking category."""
+        wikitext = push.build_wikitext(sample_item, tracking_category=None)
+        assert "[[Category:Uploaded with pd-checker]]" not in wikitext
+        # Categories should still be present
+        assert "[[Postcards of Italy]]" in wikitext
+    
+    def test_build_wikitext_custom_tracking_category(self, sample_item):
+        """Custom --tracking-category Foo yields [[Category:Foo]]."""
+        wikitext = push.build_wikitext(sample_item, tracking_category="Foo")
+        assert "[[Category:Foo]]" in wikitext
+        assert "[[Category:Uploaded with pd-checker]]" not in wikitext
+    
+    def test_build_retro_wikitext_default_tracking_category(self, sample_item_multi_image):
+        """Retro wikitext contains tracking category by default."""
+        wikitext = push.build_retro_wikitext(sample_item_multi_image, "Test - 1.png")
+        assert "[[Category:Uploaded with pd-checker]]" in wikitext
+    
+    def test_build_retro_wikitext_no_tracking_category(self, sample_item_multi_image):
+        """Retro wikitext omits tracking category when disabled."""
+        wikitext = push.build_retro_wikitext(sample_item_multi_image, "Test - 1.png", tracking_category=None)
+        assert "[[Category:Uploaded with pd-checker]]" not in wikitext
+        # Categories should still be present
+        assert "[[Postcards of Italy]]" in wikitext
+    
+    def test_build_retro_wikitext_custom_tracking_category(self, sample_item_multi_image):
+        """Retro wikitext with custom tracking category."""
+        wikitext = push.build_retro_wikitext(sample_item_multi_image, "Test - 1.png", tracking_category="MyCategory")
+        assert "[[Category:MyCategory]]" in wikitext
+        assert "[[Category:Uploaded with pd-checker]]" not in wikitext
 
 
 # =============================================================================

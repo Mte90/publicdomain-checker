@@ -289,6 +289,8 @@ python3 -m pd_checker push <folder> --live --filename-prefix PREFIX
 - Upload comment
 - Makes ZERO network calls, needs NO credentials
 
+**Tracking**: every uploaded wikitext carries `[[Category:Uploaded with pd-checker]]` — the hidden tool-tracking category (established Commons practice; MediaWiki creates the category page on first use). Override with `--tracking-category <name>`, disable with `--no-tracking`. `preflight` exempts this category from the unknown-category BLOCKED check because the page is tool-seeded, unlike user categories which must pre-exist in `cat_cache.json`.
+
 **Live upload requires:**
 1. **Explicit `--filename-prefix`** — never upload files with meaningless names
 2. **Credentials via environment variables ONLY** (never argv, never files, never printed):
@@ -495,15 +497,30 @@ shorter term (Art. 188): they are protected in Italy no longer than at origin.
 
 | Case | Templates | Reason |
 |------|-----------|--------|
-| Italian simple photo, PD, author known/irrelevant | `{{PD-Italy}}` | PD-Italy for Italian photos; **{{PD-1996}} only if pd_year <= 1996** (URAA condition) |
-| Italian simple photo, PD, anonymous/pseudonymous | `{{PD-Italy}}`, `{{PD-anon-70-EU}}` | PD-anon-70-EU for anonymous EU works; **{{PD-1996}} only if pd_year <= 1996** |
-| Artistic photo, PD, author death >70y ago | `{{PD-old-70}}` | PD-old-70 for life+70; **{{PD-1996}} only if pd_year <= 1996** (URAA condition) |
-| Anonymous/pseudonymous work, PD | `{{PD-anon-70-EU}}`, `{{PD-Italy}}` | EU anonymous works; **{{PD-1996}} only if pd_year <= 1996** |
+| Italian simple photo, PD, author known/irrelevant | `{{PD-Italy}}` | PD-Italy for Italian photos; `{{PD-1996}}` per the per-class URAA condition below |
+| Italian simple photo, PD, anonymous/pseudonymous | `{{PD-Italy}}`, `{{PD-anon-70-EU}}` | PD-anon-70-EU for anonymous EU works; `{{PD-1996}}` per the per-class URAA condition below |
+| Artistic photo, PD, author death >70y ago | `{{PD-old-70}}` | PD-old-70 for life+70; `{{PD-1996}}` per the per-class URAA condition below |
+| Anonymous/pseudonymous work, PD | `{{PD-anon-70-EU}}`, `{{PD-Italy}}` | EU anonymous works; `{{PD-1996}}` per the per-class URAA condition below |
 | Not in PD / uncertain | `[]` | No templates |
 
-**URAA condition for {{PD-1996}}**: The template requires that the work was already in the public domain in its source country on 1996-01-01 (the URAA date). If `pd_year > 1996`, the work was NOT PD on that date, so:
+**URAA condition for {{PD-1996}} (per-class, live rule)**: the template
+attaches only when the work was ALREADY in the public domain in its source
+country on 1996-01-01 — judged with the term in force then, per class:
+
+| Class | Term in force on 1996-01-01 | {{PD-1996}} eligible when |
+|-------|------------------------------|---------------------------|
+| Simple photograph (IT Art. 92 pre-reform) | 20 years from production | production year + 20 ≤ 1996 (production ≤ 1976) |
+| Anonymous/pseudonymous work (IT Art. 27 pre-reform) | 50 years from first publication | publication year + 50 ≤ 1996 (publication ≤ 1946) |
+| GB photograph, unknown author, taken before 1957-06-01 | 1956 Act 50y from first publication + 1995 revival (reg. 16(d)) | eligible only when taken ≤ 1925 |
+| Named author | life + 50 (pre-reform) | author death year + 50 ≤ 1996 |
+| Named author, death year unknown | not provable | never eligible — no tag |
+
+When the work is NOT eligible:
 - `{{PD-1996}}` is NOT attached
-- The verdict includes `us_status: {"restored_until": pd_year + 96, "basis": "URAA"}`
+- The verdict includes `us_status: {"restored_until": <publication year> + 96, "basis": "URAA"}` —
+  the US term runs 95 years from publication, so the work enters the US public
+  domain on January 1 of (publication + 96); a work already home-PD at the URAA
+  date never gets a restoration
 - The upload flag is blocked with an Italian note explaining the US restoration
 - The copyright verdict itself remains correct (PD in country of origin is still TRUE)
 
@@ -621,6 +638,11 @@ is anonymous (Art. 27), a collective work (Art. 26), or a public body's (Art. 29
   backfills are inferences — when the resulting expiry falls within the
   estimate margin (±10 years) of the current year, the verdict MUST be
   `uncertain`. A period range backfills with its latest bound.
+- **The margin weighs the operative term.** The ±10-year guard evaluates the
+  expiry of the term the branch actually applies, not a discarded one: for
+  Italian simple photographs produced ≤2004 that is the 20-year no-revival
+  term (production + 20); for ≥2005 it is the 70-year term. At current dates
+  only the 20-year side can land inside the window (production 1996–2004).
 - **No evidence, no verdict.** An item with no textual evidence and a
   low-confidence extraction must not receive a `public_domain` verdict:
   the classification and the year would both be guesses.

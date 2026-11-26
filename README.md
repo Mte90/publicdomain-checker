@@ -8,14 +8,42 @@ Ogni decisione è spiegabile: lo strumento indica la base legale, la versione de
 
 Gli internals del pacchetto sono descritti in [`pd_checker/README.md`](pd_checker/README.md). La documentazione per agenti, [`pd_checker/SKILL.md`](pd_checker/SKILL.md), è volontariamente in inglese.
 
-Esempio [`pd_checker/dashboard.html`](dashboard.html) (senza le immagini) generato da questo progetto.
+Esempio di dashboard generata da questo progetto: [`dashboard.html`](dashboard.html) (senza le immagini).
 
 ## Cosa non è
 
 - Non è consulenza legale. Il verdetto è deterministico e documentato; la decisione finale di pubblicare è tua.
 - Non è autonomo. Una persona rivede la dashboard (file generato) ed esegue ogni caricamento.
 
-## Requisiti
+## Percorso normale: con l'agente
+
+1. **Prepara la cartella di scansioni.** Metti le scansioni in una cartella del progetto, per esempio `Concorsi/`. Non prepari nessun altro file: la cartella di scansioni è l'unico input.
+
+2. **Chiedi all'agente.** Apri l'agente nella cartella del progetto e chiedi: «Analizza la cartella Concorsi seguendo pd_checker/SKILL.md». Il file [`pd_checker/SKILL.md`](pd_checker/SKILL.md) contiene le istruzioni complete per l'agente, in inglese; indicandolo nel prompt il percorso funziona con qualsiasi agente capace, anche senza auto-scoperta della skill.
+
+3. **L'agente legge le scansioni, il motore decide.** L'agente legge ogni scansione con il suo modello a visione e scrive l'estrazione dei fatti in `Concorsi/pd_data/facts.json`: tipo di documento, date, nomi, testi, classificazione. Poi esegue il motore `pd_checker`, che applica in modo deterministico le regole di copyright. Il modello estrae i fatti; il motore decide la legge. Tu non prepari nulla oltre la cartella: `facts.json` lo produce il passo di estrazione dell'agente.
+
+4. **Rivedi la dashboard.** L'agente produce `Concorsi/pubdom.json` e `Concorsi/dashboard.html`. Apri `Concorsi/dashboard.html` nel browser: per ogni elemento trovi il verdetto, l'affidabilità, la base legale, l'evidenza della data, i metadati Wikimedia proposti e le miniature. Se l'agente lavora in un ambiente remoto, scarica prima i file dalla cartella del progetto.
+
+5. **Carica quando gli elementi sono *Pronto*.** Il caricamento parte sempre in dry-run: `push` mostra cosa invierebbe, senza rete e senza credenziali. Prima dell'invio, `preflight` verifica il pacchetto (duplicati su Commons, template e categorie) e segnala ogni blocco con il motivo. L'invio vero richiede `--live` e le tue credenziali Wikimedia, un token OAuth owner-only o una bot password: la procedura completa per crearle è nel blocco sviluppatori qui sotto. I file già esistenti su Commons non vengono mai sovrascritti.
+
+## Come si decide il verdetto
+
+Il motore valuta il paese d'origine e l'Italia applicando la regola del termine più breve: pubblico dominio solo se lo è in entrambi. I template di licenza descrivono sempre il paese d'origine, quindi un'opera non italiana non riceve mai un template italiano.
+
+Ogni verdetto riporta l'affidabilità, la base legale e il motivo. Dati mancanti e vincoli non-copyright sono indicati separatamente. Quando il verdetto è `incerto` non viene emesso alcun template di licenza.
+
+Il dettaglio legale per ciascun paese è in [`publicdomain-checker.md`](publicdomain-checker.md).
+
+## Limiti
+
+Il verdetto è tanto buono quanto l'estrazione: l'agente legge le scansioni con un modello a visione e un errore di lettura (una data, un nome) si propaga al verdetto, per questo la dashboard mostra l'evidenza della data da verificare. Un nome assente dalla cache non riceve QID e resta `da_rivedere`; alcune questioni sui termini UK e USA restano aperte, segnalate in [`publicdomain-checker.md`](publicdomain-checker.md); le dichiarazioni Wikidata strutturate restano un passaggio manuale.
+
+## Percorso da riga di comando / per sviluppatori
+
+Tutto ciò che l'agente fa è eseguibile a mano. L'unico input esterno è la cartella di scansioni; l'estrazione `pd_data/facts.json` la produce il passo di estrazione (l'agente con il modello a visione) seguendo lo schema in [`pd_checker/SKILL.md`](pd_checker/SKILL.md).
+
+### Requisiti
 
 - Python 3.10 o più recente.
 - Nessuna dipendenza di terze parti: solo la libreria standard, per scelta.
@@ -23,29 +51,29 @@ Esempio [`pd_checker/dashboard.html`](dashboard.html) (senza le immagini) genera
 Esecuzione da un checkout:
 
 ```bash
-git clone <questo repository>
-cd pd-checker
+git clone https://github.com/Mte90/publicdomain-checker
+cd publicdomain-checker
 python3 -m pd_checker --help
 ```
 
 Il pacchetto si può anche installare con `pip install .`, che fornisce il comando `pd-checker`.
 
-## Uso rapido
+### Comandi
 
-Una cartella di materiale richiede un solo input: `pd_data/facts.json`, l'estrazione di cosa sia e cosa dica ciascun elemento. Tutto il resto è opzionale.
+Sulla cartella di esempio `Concorsi/`:
 
 ```bash
 # regole -> metadati -> correlazione -> dashboard -> pubdom.json
-python3 -m pd_checker run material
+python3 -m pd_checker run Concorsi
 
 # riepilogo su una schermata
-python3 -m pd_checker status material
+python3 -m pd_checker status Concorsi
 
 # convalida template e identificativi (offline)
-python3 -m pd_checker validate material
+python3 -m pd_checker validate Concorsi
 
 # controllo del pacchetto di caricamento (--offline salta le verifiche di rete)
-python3 -m pd_checker preflight material --offline
+python3 -m pd_checker preflight Concorsi --offline
 ```
 
 Opzioni utili per `run`:
@@ -63,21 +91,13 @@ python3 -m pd_checker run <cartella> --images-base .          # base per le mini
 - `pd-only`: basta il pubblico dominio con affidabilità alta;
 - `all`: ogni elemento è pronto, anche quelli con verdetto incerto. È una tua esplicita assunzione di responsabilità: il motivo resta scritto su ciascun elemento, e gli elementi incerti continuano a non ricevere alcun template di licenza PD.
 
-## Cosa produce lo strumento
+### Cosa produce lo strumento
 
 - `pubdom.json` — un unico file portabile per cartella: contesto, manifest dei modelli, verdetto di ogni elemento, correlazioni tra serie e manifest di caricamento. Leggibile da solo; il file da consegnare a chi revisiona o da archiviare.
 - `dashboard.html` — una pagina statica (interfaccia in italiano, nessun JavaScript) con il riepilogo dei verdetti, la scheda di ogni elemento, l'evidenza della data, i metadati Wikimedia proposti e le miniature cliccabili.
-- I file intermedi vivono in `<cartella>/pd_data/` e sono scratch. Solo `facts.json` non è rigenerabile: è l'input dell'estrazione.
+- I file intermedi vivono in `<cartella>/pd_data/` e sono scratch. `facts.json` è l'eccezione: è l'estrazione scritta dal passo di estrazione dell'agente, non un file da preparare a mano.
 
-## Come si decide il verdetto
-
-Il motore valuta il paese d'origine e l'Italia applicando la regola del termine più breve: pubblico dominio solo se lo è in entrambi. I template di licenza descrivono sempre il paese d'origine, quindi un'opera non italiana non riceve mai un template italiano.
-
-Ogni verdetto riporta l'affidabilità, la base legale e il motivo. Dati mancanti e vincoli non-copyright sono indicati separatamente. Quando il verdetto è `incerto` non viene emesso alcun template di licenza.
-
-Il dettaglio legale per ciascun paese è in [`publicdomain-checker.md`](publicdomain-checker.md).
-
-## Livelli di convalida
+### Livelli di convalida
 
 Nulla di ciò che esce dallo strumento è inventato:
 
@@ -90,7 +110,7 @@ Nulla di ciò che esce dallo strumento è inventato:
 
 Un QID è l'identificativo numerico di un'entità Wikidata — persone, luoghi, concetti (es. `Q507540` è Rafael Merry del Val). La risoluzione nome→QID attinge solo da `wd_cache.json`: un nome che non è in cache non riceve nessun QID e resta marcato da rivedere.
 
-Aggiorna i catalogli scaricati quando Wikimedia li cambia:
+Aggiorna i cataloghi scaricati quando Wikimedia li cambia:
 
 ```bash
 python3 -m pd_checker update                  # template + entità
@@ -100,23 +120,25 @@ python3 -m pd_checker verify-live <cartella> # verifica live dei template
 
 Un template che non esiste, un identificativo sconosciuto o una categoria non verificabile vengono segnalati sull'elemento, mai scritti come se fossero veri.
 
-## Caricamento
+### Caricamento
 
 Lo strumento prepara il pacchetto, lo convalida (`preflight`) e invia solo se lo chiedi esplicitamente: `push` parte in dry-run, l'invio vero richiede `--live` e le tue credenziali via variabili d'ambiente, tocca solo gli elementi con `upload.flag = ready` e non sovrascrive mai file esistenti su Commons.
 
-### Cosa fornisce il pacchetto
+#### Cosa fornisce il pacchetto
 
 Per ogni elemento, `pubdom.json` contiene tutto ciò che serve: il blocco `{{Information}}` (descrizione, data, fonte, autore), i template di licenza già convalidati sui cataloghi reali, le categorie proposte e verificate, l'elenco dei file con i loro SHA1 (il controllo duplicati lo fa `preflight`) e le dichiarazioni Wikidata con i QID già risolti. Vanno caricati solo gli elementi con `upload.flag = ready`; con la policy `all` anche gli incerti — ma il motivo resta scritto sull'elemento.
 
-### L'invio via API (`push`)
+#### L'invio via API (`push`)
 
 ```bash
 # dry-run (default): nessuna rete, nessuna credenziale — mostra cosa invierebbe
-python3 -m pd_checker push <cartella>
+python3 -m pd_checker push Concorsi
 
 # invio vero: servono credenziali e un prefisso per i nomi dei file
-python3 -m pd_checker push <cartella> --live --filename-prefix "Merry del Val santino"
+python3 -m pd_checker push Concorsi --live --filename-prefix "Concorsi"
 ```
+
+Ogni file caricato porta automaticamente la categoria nascosta `[[Category:Uploaded with pd-checker]]`, per tracciare gli upload fatti col tool (personalizzabile con `--tracking-category`, disattivabile con `--no-tracking`).
 
 Cosa serve — una delle due vie, mai la password dell'account. Nota: il token OAuth NON si richiede su Commons, l'OAuth di Wikimedia è centralizzato su meta.
 
@@ -136,8 +158,6 @@ Cosa serve — una delle due vie, mai la password dell'account. Nota: il token O
 4. `export PD_WM_BOT_USER='TuoNome@pd-checker'` e `export PD_WM_BOT_PASSWORD='<la password generata>'`
 
 In entrambi i casi: `export PD_WM_CONTACT='tua@email'` — serve per lo User-Agent richiesto dalla policy Wikimedia. Se cambi la password dell'account, la bot password smette di funzionare finché non la rigeneri.
-
-Il wikitext (`{{Information}}`, licenze, categorie) è già assemblato dal pacchetto; un file già esistente su Commons non viene mai sovrascritto (l'elemento risulta fallito con il motivo); `PD_WM_CONTACT` completa lo User-Agent richiesto dall'etichetta API Wikimedia.
 
 **Cosa carica**: ogni item con `upload.flag = ready` — con la policy `all` anche gli incerti — ma il motivo resta scritto sull'elemento. Ogni item carica TUTTE le sue immagini (fronte + retro), con i retro nominati `(<prefix> - <n> (retro).png)` e pagine {{Information}} minime che linkano al fronte.
 
@@ -164,19 +184,14 @@ Modalità: DRY-RUN
 
 Con zero elementi pronti (policy strict) il comando rifiuta ed esce con errore: `[push] 0 pronti su 8; usa --upload-policy per cambiare la politica.`
 
-### Fatto a mano, se preferisci
+#### Fatto a mano, se preferisci
 
 Apri commons.wikimedia.org con il tuo account, carica il file dell'elemento da Special:Upload e incolla nel campo descrizione il wikitext assemblandolo dai campi dell'elemento (`{{Information}}` + template di licenza + categorie); le dichiarazioni Wikidata (P31, P170, P180, P571…) si aggiungono nella scheda Structured data, con i QID presi dal pacchetto (per es. P180 = Rafael Merry del Val → `Q507540`).
 
-## Limiti
-
-- La risoluzione delle entità dipende dalla cache: un nome sconosciuto non riceve QID e resta marcato `da_rivedere`.
-- Alcune questioni sui termini UK e USA restano aperte; sono segnalate come non verificate in `publicdomain-checker.md`.
-- L'invio via `push` carica i file su Commons con il wikitext; le dichiarazioni strutturate (SDC) restano un passaggio manuale per ora.
-
-## Sviluppo
+### Sviluppo
 
 ```bash
 python3 -m pytest pd_checker/tests -q
 ```
 
+Conteggio attuale: 242 test.

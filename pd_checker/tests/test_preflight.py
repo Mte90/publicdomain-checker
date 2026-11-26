@@ -570,6 +570,109 @@ class TestNoLicensePreflight:
         assert result["ready"] is True
         assert result["reasons"] == ["OK"]
 
+    def test_preflight_tracking_category_exempt(self, mock_folder):
+        """Tracking category 'Uploaded with pd-checker' is exempt from BLOCKED check."""
+        # Item with only the tracking category (no other categories)
+        item = {
+            "file": "test.png",
+            "images": ["test.png"],
+            "commons_templates": ["{{PD-Italy}}"],
+            "commons_categories": ["Uploaded with pd-checker"],  # Only tracking category
+            "information": {
+                "description": "Test",
+                "date": "1920",
+                "source": "Scansione dalla collezione di Daniele Scasciafratte",
+                "author": "Unknown"
+            },
+            "upload": {"flag": "ready", "reason": []},
+            "template_unknown": [],
+            "category_unknown": [],  # Should be empty because tracking cat is exempt
+            "entity_unknown": []
+        }
+        
+        # The tracking category should NOT be blocked even though it's not in cache
+        result = validate_item(
+            item,
+            mock_folder,
+            offline=True,
+            template_unknown=[],
+            cat_cache_lookup=lambda x: None,  # Simulate cache miss for all categories
+            wd_entities_unknown=[],
+            commons_duplicates={}
+        )
+        
+        # Should be ready because tracking category is exempt
+        assert result["ready"] is True
+        assert result["reasons"] == ["OK"]
+
+    def test_preflight_genuine_unknown_category_still_blocked(self, mock_folder):
+        """With tracking disabled, a genuinely unknown category still triggers BLOCKED."""
+        # Item with a genuinely unknown category (not the tracking category)
+        item = {
+            "file": "test.png",
+            "images": ["test.png"],
+            "commons_templates": ["{{PD-Italy}}"],
+            "commons_categories": ["Unknown Category XYZ"],
+            "information": {
+                "description": "Test",
+                "date": "1920",
+                "source": "Scansione dalla collezione di Daniele Scasciafratte",
+                "author": "Unknown"
+            },
+            "upload": {"flag": "ready", "reason": []},
+            "template_unknown": [],
+            "category_unknown": ["Unknown Category XYZ"],
+            "entity_unknown": []
+        }
+        
+        result = validate_item(
+            item,
+            mock_folder,
+            offline=True,
+            template_unknown=[],
+            cat_cache_lookup=lambda x: "exists",
+            wd_entities_unknown=[],
+            commons_duplicates={}
+        )
+        
+        # Should be blocked because category is not in cache
+        assert result["ready"] is False
+        assert any("categories not in cache" in r for r in result["reasons"])
+    
+    def test_preflight_category_unknown_field_blocked(self, mock_folder):
+        """category_unknown field being non-empty blocks the item (regression test)."""
+        # Item with valid categories but category_unknown field populated
+        item = {
+            "file": "test.png",
+            "images": ["test.png"],
+            "commons_templates": ["{{PD-Italy}}"],
+            "commons_categories": ["Test category"],
+            "information": {
+                "description": "Test",
+                "date": "1920",
+                "source": "Scansione dalla collezione di Daniele Scasciafratte",
+                "author": "Unknown"
+            },
+            "upload": {"flag": "ready", "reason": []},
+            "template_unknown": [],
+            "category_unknown": ["Some unknown category"],  # Non-empty field
+            "entity_unknown": []
+        }
+        
+        result = validate_item(
+            item,
+            mock_folder,
+            offline=True,
+            template_unknown=[],
+            cat_cache_lookup=lambda x: "exists",  # All categories exist in cache
+            wd_entities_unknown=[],
+            commons_duplicates={}
+        )
+        
+        # Should be blocked because category_unknown is in the combined check
+        assert result["ready"] is False
+        assert any("categories not in cache" in r for r in result["reasons"])
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

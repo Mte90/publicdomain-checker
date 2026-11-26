@@ -444,10 +444,17 @@ non riceve mai un template italiano.
 | --- | --- | --- |
 | Autore noto | vita + 70 anni | CDPA s.12(2) |
 | **Autore ignoto** | **70 anni dalla fine dell'anno di creazione** | **CDPA s.12(3)** |
-| Fotografia pre-1957 | termine di 50 anni dalla realizzazione (1911 Act s.21), scaduto il 31/12/1960 | CDPA Sch.1 para 12(2)(c) |
+| Fotografia pre-1957 | **50 anni dalla fine dell'anno di PRIMA PUBBLICAZIONE** (1956 Act s.3(4)(b), applicato da CDPA Sch.1 para 12(2)(c)) — NON "50 anni dalla realizzazione" | CDPA Sch.1 para 12(2)(c); Copyright Act 1956 s.3(4)(b) |
 
-Quindi una fotografia inglese del **1910 con autore ignoto è in pubblico dominio**:
-non serve la data di morte del fotografo.
+**Ripristino 1995 (reg. 16(d) del SI 1995/3297)**: la direttiva UE ha ripristinato il copyright UK per opere il cui termine era scaduto prima del 31/12/1995 ma che erano ancora protette in uno Stato EEA al 1° luglio 1995. Per le fotografie anonime pre-1957: il termine direttiva (70y dalla realizzazione) significa protezione EEA al 1/7/1995 solo per opere realizzate nel 1925 o dopo.
+
+**Conseguenza alla data URAA (1/1/1996) per fotografie anonime UK pre-1957**:
+- **realizzate ≤1925** → PD UK al 1/1/1996 (scadute 31/12/1960 con 1956 Act, non ripristinate perché EEA-PD) → **{{PD-1996}} ammissibile**;
+- **realizzate 1926–1956** → ancora protette UK al 1/1/1996 (vecchio termine 50y in corso per ≥1946, o ripristinate a realizzazione+70 per 1926–1945) → **{{PD-1996}} NON ammissibile**; copyright USA ripristinato fino al 31/12/(pubblicazione+95).
+
+**Esempio lavorato**:
+- Foto del **1910** (autore ignoto): scaduta 31/12/1960 (1910+50), non ripristinata (EEA-PD) → UK-PD al 1/1/1996 = **TRUE** → {{PD-1996}} PRESENTE.
+- Foto del **1933** (autore ignoto): ancora protetta UK al 1/1/1996 → {{PD-1996}} ASSENTE; **TRAPPOLA 1926–1956**: il vecchio termine 50y dalla pubblicazione era ancora in corso (o ripristinato a realizzazione+70), quindi copyright USA ripristinato fino al 31/12/2028; PD USA dal 1/1/2029.
 
 **Template Commons**: `{{PD-anon-70}}` + `{{PD-1996}}` (autore ignoto);
 `{{PD-old-70}}` + `{{PD-1996}}` (autore noto).

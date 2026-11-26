@@ -85,13 +85,15 @@ def validate_credentials(credentials: dict[str, str | None], live: bool) -> tupl
 # Wikitext assembler
 # =============================================================================
 
-def build_wikitext(item: dict, other_versions: str | None = None) -> str:
+def build_wikitext(item: dict, other_versions: str | None = None, tracking_category: str | None = "Uploaded with pd-checker") -> str:
     """Build Commons description page wikitext from an item package.
     
     Args:
         item: Item dict with 'information', 'commons_templates', 'commons_categories'
         other_versions: value for the |other_versions= field (the data link to the
             retro side); omitted when the item has no retro side
+        tracking_category: Category tag for tool uploads; None disables tracking.
+            Default: "Uploaded with pd-checker"
     
     Returns:
         Wikitext string for the file description page
@@ -157,6 +159,10 @@ def build_wikitext(item: dict, other_versions: str | None = None) -> str:
     categories = item.get("commons_categories", [])
     for cat in categories:
         lines.append(f"[[{cat}]]")
+    
+    # Tracking category (tool-seeded, appears after user categories)
+    if tracking_category:
+        lines.append(f"[[Category:{tracking_category}]]")
     
     return "\n".join(lines)
 
@@ -485,6 +491,18 @@ def cmd_push(argv: list[str], live: bool = False) -> int:
         default=live,
         help="Perform actual upload (default: dry-run)"
     )
+    parser.add_argument(
+        "--tracking-category",
+        metavar="NAME",
+        type=str,
+        default="Uploaded with pd-checker",
+        help="Tracking category name (default: 'Uploaded with pd-checker')"
+    )
+    parser.add_argument(
+        "--no-tracking",
+        action="store_true",
+        help="Disable tracking category"
+    )
     args = parser.parse_args(argv)
     
     folder = Path(args.folder)
@@ -513,7 +531,7 @@ def cmd_push(argv: list[str], live: bool = False) -> int:
     ]
     
     if not ready_items:
-        print(f"[push] 0 pronti su {len(items)}; usa --upload-policy per cambiare la politica.")
+        print(f"[push] 0 pronti su {len(items)}; la politica si imposta in fase di run: python3 -m pd_checker run <cartella> --upload-policy all, poi rilancia push.")
         return 1
     
     # Filter out items without license templates (Commons acceptance gate)
@@ -630,11 +648,18 @@ def cmd_push(argv: list[str], live: bool = False) -> int:
             return 1
         print(f"[push] CSRF token obtained", file=sys.stderr)
     
+    # Determine tracking category
+    if args.no_tracking:
+        tracking_category = None
+    else:
+        tracking_category = args.tracking_category
+    
     # Process items - upload ALL images per item (front + back + any further sides)
     print(f"\n== Push: {folder.name} ==")
     print(f"Items pronti: {len(ready_items)}")
     print(f"Modalità: {'LIVE' if live else 'DRY-RUN'}")
     print(f"Prefix: {prefix}")
+    print(f"Tracking category: {tracking_category if tracking_category else 'disabled'}")
     print()
     
     results = []
@@ -721,7 +746,7 @@ def cmd_push(argv: list[str], live: bool = False) -> int:
         front_other = None
         if len(planned) > 1:
             front_other = f"Retro: [[:File:{planned[1][2]}|{planned[1][2]}]]"
-        main_wikitext = build_wikitext(item, other_versions=front_other)
+        main_wikitext = build_wikitext(item, other_versions=front_other, tracking_category=tracking_category)
         
         # Build wikitext for the main/retro files (with the data link to the front)
         for side_idx, img_path, filename in planned:
@@ -731,6 +756,7 @@ def cmd_push(argv: list[str], live: bool = False) -> int:
                 wikitext = build_retro_wikitext(
                     item, front_filename,
                     other_versions=f"Fronte: [[:File:{front_filename}|{front_filename}]]",
+                    tracking_category=tracking_category,
                 )
             
             # Upload comment
@@ -870,7 +896,7 @@ def _check_existing_files(opener: urllib.request.OpenerDirector, titles: list[st
     return existing
 
 
-def build_retro_wikitext(item: dict, main_filename: str, other_versions: str | None = None) -> str:
+def build_retro_wikitext(item: dict, main_filename: str, other_versions: str | None = None, tracking_category: str | None = "Uploaded with pd-checker") -> str:
     """Build wikitext for a retro (back/further side) file.
     
     Args:
@@ -878,7 +904,9 @@ def build_retro_wikitext(item: dict, main_filename: str, other_versions: str | N
         main_filename: The main file's filename (for the backlink)
         other_versions: value for the |other_versions= field (the data link to
             the front side)
-        
+        tracking_category: Category tag for tool uploads; None disables tracking.
+            Default: "Uploaded with pd-checker"
+    
     Returns:
         Wikitext string for the retro file description page
     """
@@ -945,5 +973,9 @@ def build_retro_wikitext(item: dict, main_filename: str, other_versions: str | N
     categories = item.get("commons_categories", [])
     for cat in categories:
         lines.append(f"[[{cat}]]")
+    
+    # Tracking category (tool-seeded, appears after user categories)
+    if tracking_category:
+        lines.append(f"[[Category:{tracking_category}]]")
     
     return "\n".join(lines)

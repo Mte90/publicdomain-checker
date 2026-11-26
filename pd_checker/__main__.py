@@ -178,6 +178,9 @@ def validate_item(
     
     categories_missing = []
     for cat in commons_categories:
+        # Tool-seeded tracking category (created on first use by MediaWiki)
+        if cat == "Uploaded with pd-checker":
+            continue
         result = cat_cache_lookup(cat)
         if result != "exists":
             categories_missing.append(cat)
@@ -335,6 +338,9 @@ def cmd_run(argv: list[str]) -> int:
             if categories:
                 unknown = []
                 for cat in categories:
+                    # Tool-seeded tracking category (created on first use by MediaWiki)
+                    if cat == "Uploaded with pd-checker":
+                        continue
                     if not catalogs.lookup_cat(cat):
                         unknown.append(cat)
                         all_unknown_cats.add(cat)
