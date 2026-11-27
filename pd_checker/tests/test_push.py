@@ -1375,3 +1375,27 @@ def test_sdc_eligible_counts_only_ready_statements():
         {"property": "P571", "time": "+1928-01-01T00:00:00Z", "precision": 9},
     ]
     assert push._sdc_eligible(statements) == 2
+
+
+def test_derive_filename_sanitizes_commons_forbidden_chars():
+    """Colons in the editorial title become the archive dash style; other
+    MediaWiki-forbidden characters never reach the Commons filename."""
+    from pd_checker.core.push import derive_filename
+
+    item = {
+        "extracted_facts": {"content_title": "Tempio di Nettuno: facciata e frontone",
+                              "images": ["Varie/24.png"]},
+        "reference_year": None,
+    }
+    name = derive_filename(item, "Prefisso", 1, 26)
+    assert name == "Tempio di Nettuno - facciata e frontone.png"
+
+    bad = {
+        "extracted_facts": {"content_title": 'Un/tilt?lo [f]ot|o "g" <r> *x*',
+                              "images": ["Varie/x.png"]},
+        "reference_year": 1926,
+    }
+    name2 = derive_filename(bad, "P", 1, 1)
+    assert ":" not in name2 and "/" not in name2 and "?" not in name2
+    assert "[" not in name2 and "|" not in name2 and "<" not in name2
+    assert name2.endswith("1926.png")

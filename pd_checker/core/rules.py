@@ -909,7 +909,7 @@ _FACTS_FIELDS = (
     "year_source", "visible_text", "visible_text_translation", "visible_text_lang",
     "translation_lang", "has_identifiable_people", "has_handwriting", "vlm_confidence", "set_id", "part", "series_id",
     "date_evidence", "images", "postmark", "publisher", "is_vatican_asset", "content_title", "ocr_texts", "owner_verdict",
-    "commons_categories", "depicts_exclude",
+    "commons_categories", "depicts_exclude", "description_note", "depicts",
 )
 
 

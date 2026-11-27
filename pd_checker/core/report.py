@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import html
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -194,10 +195,18 @@ def _render_status_reason(stmt: dict) -> str:
     return f'<span class="wd-status-review"{tip}>{label}</span>'
 
 
-def _sort_key(item: dict) -> tuple[int, str]:
-    """Sort key: uncertain first, then not_public_domain, then public_domain."""
+def _natural_file_key(path: str) -> list:
+    """Natural filename order: numeric segments compare as integers, so 2
+    comes before 10 and card navigation follows the physical album order."""
+    return [int(part) if part.isdigit() else part.lower()
+            for part in re.split(r"(\d+)", path)]
+
+
+def _sort_key(item: dict) -> tuple:
+    """Sort key: uncertain first, then not_public_domain, then public_domain;
+    within each group, natural file order (2 before 10)."""
     order = {"uncertain": 0, "not_public_domain": 1, "public_domain": 2}
-    return (order.get(item["status"], 3), item["file"])
+    return (order.get(item["status"], 3), _natural_file_key(item["file"]))
 
 
 def _generate_html(verdicts: list[dict], images_base: str | None, ctx: any, run_manifest: any, upload_policy: str, package_upload_prefix: str | None = None) -> str:

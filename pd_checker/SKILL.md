@@ -287,6 +287,13 @@ The tool appends the annata (the item's operative reference year) automatically 
 - **No reference year**: the year part is simply omitted — never an empty gap.
 - **Retro sides**: always get the ` (retro)` suffix and their own minimal page, cross-linked via `other_versions`.
 - **Uniqueness**: `content_title` values MUST be unique within the package — they are the filename stems.
+- **Sanitization**: `derive_filename` rewrites the editorial colon style
+  (`Titolo: dettaglio`) to the archive dash style (`Titolo - dettaglio`)
+  and replaces every MediaWiki-forbidden character (: / \ ? * " < > [ ] { } | #)
+  with a dash, so the derived Commons filename is always a valid title.
+  The uploader sets the context `upload_prefix` for every package so the
+  dashboard can plan the filenames; with content-titled names the prefix is
+  used by the resolver and by the legacy fallback scheme, never glued.
   `push` refuses an item whose derived name duplicates an earlier item's (`[RIFIUTATO] … content_title deve essere unico nel pacchetto`): fix the title in facts.json, never let two files share a stem.
 - **Writing good titles**: name the specific subject first — document type + issuer/protagonist, or the depicted event (“Tessera di riconoscimento militare Vecchiarelli”, “Invito Quirinale celebrazioni Mazzini”, “Locandina "Ave Maria"
   - Rieti”).
@@ -372,6 +379,16 @@ Every "Cosa fare adesso" action maps to something the agent can execute — when
 - "Conferma la data" — re-inspect the scan, correct `reference_year` / `year_source` in `pd_data/facts.json`, re-run.
   A year WRITTEN on the item is THE date — printed, postmarked, or handwritten on the document (`year_source`: `visible_text` / `postmark` / `manuscript`): it needs no confirmation and it decides boundaries.
   Only non-documentary sources (`visual_estimate`, `folder_context`, missing) require the owner's confirmation before the year counts.
+  When NO written date exists anywhere on the item, the extraction may
+  derive a period estimate instead of leaving the year empty:
+  era-clues (clothing, vehicles, ship profiles, print and paper style) or
+  historical termini (an issuer's active span) - always a range, not a point.
+  Encode it as `reference_year` = best estimate with `year_source` null
+  (a deduction, never `visual_estimate` evidence), and `date_evidence` naming
+  the clues and the plausible band; the engine emits P571 with the circa
+  qualifier and a to-review status, and the owner can override with the known
+  year. Precedents: ANPIL safety cards (circa 1932, ENPI merger terminus),
+  Paestum travel album (circa 1948, clothing and warship profiles).
 - "resolve «nome» --live" — run `python3 -m pd_checker resolve "<name>" --live`.
   A found QID is cached and the next `run` turns the statement `ok`.
   Not found (exit 1) means the item does not exist on Wikidata: leave the statement QID-less (the name stays in the wikitext) or the human creates the item with a source and re-resolves.
@@ -381,6 +398,7 @@ Every "Cosa fare adesso" action maps to something the agent can execute — when
   Mentions on the address or message side are NOT subjects: the recipient's city, street or province on a mailed back must never become an SDC `depicts` claim — declare those strings in facts `depicts_exclude` and the text-match will skip them for that item.
   Labels on Wikidata rarely match prints letter-by-letter (`S. Domenico`, `94° FANTERIA`, abbreviations): resolve the real item, then add the exact printed form as a cache alias pruned to context (verify the label live before caching; wrong-entity false matches are real — e.g. a church in another city mistaken for the intended subject).
   The author credited on the item is P170 (creator), never `depicts`: write the full authoritative author name in facts and never alias a printed author form in the cache — it would fire the text-match and depict the author instead of the work (owner correction 2026-11-27, Despujols card).
+  Subjects identified IN THE IMAGE but not printed in the text (a photographed building with no caption) are declared per item in facts `depicts` as {label, qid} pairs — the label must be cache-verified; in regeneration it comes before the folder-level context.depicts and dedupes with it by QID.
 - "Categorie per contenuto" — after the entity pass, propose Commons categories from the DEPICTED SUBJECT of each item, never from the archive's location: the dedicated regiment category for a military group photo («Category:94º Reggimento fanteria "Messina"»), the city of depicted subject and its painter/church/saint categories for a postcard reproduction, the issuing institution's categories for documents.
   Method: Commons search in namespace 14 using the subjects' names from the transcription and the resolved entities; prefer DEDICATED subject categories over generic ones («Category:Siena» is fine as support, but a dedicated subject category must lead when it exists).
   NEVER assign a category without verifying it exists: check every title live, then record it in cat_cache with the check date.

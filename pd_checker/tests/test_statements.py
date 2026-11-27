@@ -80,3 +80,48 @@ def test_p180_miner_honors_depicts_exclude(monkeypatch):
     block = wikidata.build(verdict, {"depicts": []})
     p180_values = [s["value"] for s in block["statements"] if s["property"] == "P180"]
     assert p180_values == []
+
+
+def test_description_note_prepended_to_information():
+    """Facts description_note is editorial framing prepended to the verbatim transcription."""
+    from pd_checker.core import wikidata
+
+    verdict = {
+        "extracted_facts": {
+            "document_type": "postcard",
+            "visible_text": "SALT | PEPPER",
+            "images": ["Varie/x.png"],
+            "description_note": "Nota editoriale dell'archivio",
+        },
+        "status": "public_domain",
+        "commons_templates": ["{{PD-Italy}}"],
+        "upload": {"flag": "ready"},
+    }
+    block = wikidata.build(verdict, {"categories": [], "provenance": "Archivio di Daniele Scasciafratte"})
+    desc = block["information"]["description"]
+    assert desc == "Nota editoriale dell'archivio. SALT  /  PEPPER"
+
+
+def test_item_depicts_before_context_and_dedup(monkeypatch):
+    """Facts per-item depicts (image-identified subjects) come first and dedup with ctx by QID."""
+    from pd_checker.core import catalogs, wikidata
+
+    monkeypatch.setattr(catalogs, "lookup", lambda name: "Q3077776" if "Basilica" in name else ("Q20494" if name == "Norcia" else None))
+    verdict = {
+        "extracted_facts": {
+            "document_type": "photo",
+            "visible_text": "[nessun testo]",
+            "images": ["Varie/1_fronte.png"],
+            "depicts": [{"label": "Basilica di San Benedetto (Norcia)", "qid": "Q3077776"}],
+        },
+        "status": "public_domain",
+        "commons_templates": ["{{PD-Italy}}"],
+        "upload": {"flag": "ready"},
+    }
+    ctx = {"depicts": [{"label": "Norcia"}], "categories": []}
+    block = wikidata.build(verdict, ctx)
+    p180 = [s for s in block["statements"] if s["property"] == "P180"]
+    values = [(s["value"], s["source"]) for s in p180]
+    assert values[0] == ("Basilica di San Benedetto (Norcia)", "extracted_facts.depicts")
+    assert any(v == ("Norcia", "context.depicts") for v in values)
+    assert len({s["qid"] for s in p180}) == len(p180)

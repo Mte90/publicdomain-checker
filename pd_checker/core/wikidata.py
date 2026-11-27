@@ -298,23 +298,26 @@ def _build_statements(verdict: dict, ctx: dict) -> list[dict]:
     # Track QIDs we've already emitted to avoid duplicates
     emitted_p180_qids = {}
     
-    # First, add subjects from context.depicts
-    depicts = ctx.get("depicts", [])
-    if depicts:
-        for dep in depicts:
-            label = dep.get("label", "")
-            # Resolve through cache — never use a qid from context that isn't in cache
-            qid, _, _ = _lookup_qid(label)
-            if qid and qid not in emitted_p180_qids:
-                emitted_p180_qids[qid] = label
-                statements.append({
-                    "property": P180,
-                    "label": "raffigura",
-                    "value": label,
-                    "qid": qid,
-                    "source": "context.depicts",
-                    "status": "ok",
-                })
+    # First, per-item subjects declared in facts `depicts` (image identification:
+    # subjects the vision recognized but that are not printed in the text), then
+    # the folder-level context.depicts (shared subjects); all resolved through
+    # cache, deduplicated by QID.
+    item_depicts = extracted.get("depicts") or []
+    ctx_depicts = ctx.get("depicts", []) or []
+    for dep in [*(item_depicts), *ctx_depicts]:
+        label = dep.get("label", "")
+        # Resolve through cache — never use a qid from context that isn't in cache
+        qid, _, _ = _lookup_qid(label)
+        if qid and qid not in emitted_p180_qids:
+            emitted_p180_qids[qid] = label
+            statements.append({
+                "property": P180,
+                "label": "raffigura",
+                "value": label,
+                "qid": qid,
+                "source": "extracted_facts.depicts" if dep in item_depicts else "context.depicts",
+                "status": "ok",
+            })
     
     # Second, derive candidate subjects from item's visible_text by matching against EXISTING cache
     visible_text = extracted.get("visible_text") or ""
@@ -394,6 +397,8 @@ def _build_information(verdict: dict, ctx: dict) -> dict:
     # Description in Italian from the transcription — full text, never truncated.
     # The front side's OCR transcription (written by `ocr --apply`) is the most
     # complete source; the vision transcription is the fallback.
+    # A facts `description_note` (editorial, not verbatim) is prepended when
+    # present — attribution framing the scan text cannot carry by itself.
     visible_text = extracted.get("visible_text") or ""
     doc_type = (extracted.get("document_type") or "unknown").lower()
     ocr_texts = extracted.get("ocr_texts") or {}
@@ -406,6 +411,9 @@ def _build_information(verdict: dict, ctx: dict) -> dict:
     # Build Italian description
     if transcription:
         description = transcription.replace("|", " / ")
+        note = (extracted.get("description_note") or "").strip()
+        if note:
+            description = f"{note}. {description}"
     else:
         # Fallback description based on document type
         descriptions = {

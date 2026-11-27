@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import sys
 import time
@@ -211,7 +212,13 @@ def derive_filename(item: dict, prefix: str, item_number: int, total_items: int 
 
     title = (facts.get("content_title") or "").strip()
     if title:
-        return f"{title}{year_part}{ext}"
+        # Commons/MediaWiki titles reject a set of characters; the Italian
+        # editorial colon style ("Titolo: dettaglio") becomes the archive's
+        # dash style so the derived name is always a valid, linkable title.
+        safe_title = re.sub(r"\s*:\s*", " - ", title)
+        safe_title = re.sub(r'[#<>\[\]{}|/\\?*"]+', "-", safe_title)
+        safe_title = re.sub(r"\s{2,}", " ", safe_title).strip()
+        return f"{safe_title}{year_part}{ext}"
 
     # Legacy prefix-based scheme: only for items without a content_title
     if total_items == 1:

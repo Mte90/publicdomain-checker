@@ -191,6 +191,34 @@
     "Q224692": {
       "label_it": "Torri in Sabina",
       "label_en": "Torri in Sabina"
+    },
+    "Q20494": {
+      "label_it": "Norcia",
+      "label_en": "Norcia"
+    },
+    "Q3077776": {
+      "label_it": "basilica di San Benedetto",
+      "label_en": "Monastery of St. Benedict"
+    },
+    "Q16896941": {
+      "label_it": "Paestum",
+      "label_en": "Paestum"
+    },
+    "Q453634": {
+      "label_it": "Tempio di Nettuno",
+      "label_en": "Second Temple of Hera in Paestum"
+    },
+    "Q119716659": {
+      "label_it": "",
+      "label_en": "First Temple of Hera"
+    },
+    "Q3983228": {
+      "label_it": "Tempio di Atena",
+      "label_en": "Temple of Athena"
+    },
+    "Q3329487": {
+      "label_it": "Museo archeologico nazionale di Paestum",
+      "label_en": "National Archaeological Museum of Paestum"
     }
   }
 }

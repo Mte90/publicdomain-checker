@@ -408,6 +408,181 @@
       "label_en": "Regio istituto superiore agrario di Perugia",
       "result": "not_found",
       "checked": "2026-11-27"
+    },
+    "Associazione Nazionale per la Prevenzione degli Infortuni sul Lavoro": {
+      "qid": null,
+      "label_it": "Associazione Nazionale per la Prevenzione degli Infortuni sul Lavoro",
+      "label_en": "Associazione Nazionale per la Prevenzione degli Infortuni sul Lavoro",
+      "result": "not_found",
+      "checked": "2026-11-27"
+    },
+    "Arti Grafiche Milanesi": {
+      "qid": null,
+      "label_it": "Arti Grafiche Milanesi",
+      "label_en": "Arti Grafiche Milanesi",
+      "result": "not_found",
+      "checked": "2026-11-27"
+    },
+    "Norcia": {
+      "qid": "Q20494",
+      "label_it": "Norcia",
+      "label_en": "Norcia",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Basilica di San Benedetto (Norcia)": {
+      "qid": "Q3077776",
+      "label_it": "basilica di San Benedetto",
+      "label_en": "Monastery of St. Benedict",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Palazzo Comunale di Norcia": {
+      "qid": null,
+      "label_it": "Palazzo Comunale di Norcia",
+      "label_en": "Palazzo Comunale di Norcia",
+      "result": "not_found",
+      "checked": "2026-11-27"
+    },
+    "chiesa di San Benedetto": {
+      "qid": null,
+      "label_it": "chiesa di San Benedetto",
+      "label_en": "chiesa di San Benedetto",
+      "result": "ambiguous",
+      "candidates": [
+        {
+          "qid": "Q3669603",
+          "label": "San Benedetto (Parma)",
+          "description": "church building in Parma, Italy"
+        },
+        {
+          "qid": "Q99381474",
+          "label": "San Benedetto",
+          "description": "church in San Benedetto Val di Sambro (BO)"
+        },
+        {
+          "qid": "Q3669595",
+          "label": "San Benedetto (Ferrara)",
+          "description": "church building in Ferrara, Italy"
+        }
+      ],
+      "checked": "2026-11-27"
+    },
+    "Palazzo Comunale Norcia": {
+      "qid": null,
+      "label_it": "Palazzo Comunale Norcia",
+      "label_en": "Palazzo Comunale Norcia",
+      "result": "not_found",
+      "checked": "2026-11-27"
+    },
+    "collegiata San Benedetto Norcia": {
+      "qid": null,
+      "label_it": "collegiata San Benedetto Norcia",
+      "label_en": "collegiata San Benedetto Norcia",
+      "result": "not_found",
+      "checked": "2026-11-27"
+    },
+    "Paestum": {
+      "qid": "Q16896941",
+      "label_it": "Paestum",
+      "label_en": "Paestum",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "tempio di Nettuno": {
+      "qid": null,
+      "label_it": "tempio di Nettuno",
+      "label_en": "tempio di Nettuno",
+      "result": "ambiguous",
+      "candidates": [
+        {
+          "qid": "Q453634",
+          "label": "Second Temple of Hera in Paestum",
+          "description": "ancient Greek temple"
+        },
+        {
+          "qid": "Q1844125",
+          "label": "Basilica of Neptune",
+          "description": "Roman basilica in honour of Neptune"
+        },
+        {
+          "qid": "Q2489646",
+          "label": "Temple of Neptune",
+          "description": "ancient Roman temple"
+        }
+      ],
+      "checked": "2026-11-27"
+    },
+    "tempio di Hera I": {
+      "qid": null,
+      "label_it": "tempio di Hera I",
+      "label_en": "tempio di Hera I",
+      "result": "ambiguous",
+      "candidates": [
+        {
+          "qid": "Q3555920",
+          "label": "Temple of Hera, Paestum",
+          "description": "building in Capaccio, Italy"
+        },
+        {
+          "qid": "Q453634",
+          "label": "Second Temple of Hera in Paestum",
+          "description": "ancient Greek temple"
+        }
+      ],
+      "checked": "2026-11-27"
+    },
+    "tempio di Atena": {
+      "qid": null,
+      "label_it": "tempio di Atena",
+      "label_en": "tempio di Atena",
+      "result": "ambiguous",
+      "candidates": [
+        {
+          "qid": "Q3983228",
+          "label": "Temple of Athena",
+          "description": "building in Paestum, Italy"
+        },
+        {
+          "qid": "Q104776526",
+          "label": "Archeion, Cyrene",
+          "description": "public or civic building / stoa / gymnasium in Cyrene, Libya"
+        },
+        {
+          "qid": "Q3983226",
+          "label": "Temple of Athena",
+          "description": "ancient Greek temple in Syracuse"
+        }
+      ],
+      "checked": "2026-11-27"
+    },
+    "Museo archeologico nazionale di Paestum": {
+      "qid": "Q3329487",
+      "label_it": "Museo archeologico nazionale di Paestum",
+      "label_en": "National Archaeological Museum of Paestum",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Tempio di Nettuno (Paestum)": {
+      "qid": "Q453634",
+      "label_it": "Tempio di Nettuno",
+      "label_en": "Second Temple of Hera in Paestum",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Tempio di Hera I (Paestum)": {
+      "qid": "Q119716659",
+      "label_it": "Tempio di Hera I (Paestum)",
+      "label_en": "First Temple of Hera",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Tempio di Atena (Paestum)": {
+      "qid": "Q3983228",
+      "label_it": "Tempio di Atena",
+      "label_en": "Temple of Athena",
+      "result": "ok",
+      "checked": "2026-11-27"
     }
   }
 }
