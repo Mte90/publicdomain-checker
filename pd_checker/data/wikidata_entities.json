@@ -57,6 +57,11 @@
       "label_it": "data massima",
       "label_en": "latest date",
       "datatype": "time"
+    },
+    "P407": {
+      "label_it": "lingua dell'opera o del nome",
+      "label_en": "language of work or name",
+      "datatype": "wikibase-item"
     }
   },
   "items": {
@@ -271,6 +276,42 @@
     "Q16525155": {
       "label_it": "Alessandro Limongelli",
       "label_en": "Alessandro Limongelli"
+    },
+    "Q97579226": {
+      "label_it": "14º Reggimento fanteria \"Pinerolo\"",
+      "label_en": "14 infantry regiment Pinerolo"
+    },
+    "Q3599502": {
+      "label_it": "60º Reggimento fanteria",
+      "label_en": "60º Reggimento fanteria \"Calabria\""
+    },
+    "Q855186": {
+      "label_it": "Regia Marina",
+      "label_en": "Royal Italian Navy"
+    },
+    "Q203824": {
+      "label_it": "guerra italo-turca",
+      "label_en": "Italo-Turkish War"
+    },
+    "Q54852": {
+      "label_it": "Arma dei Carabinieri",
+      "label_en": "Carabinieri"
+    },
+    "Q827218": {
+      "label_it": "bersaglieri",
+      "label_en": "Bersaglieri"
+    },
+    "Q1934874": {
+      "label_it": "Accademia militare di Modena",
+      "label_en": "Military Academy of Modena"
+    },
+    "Q361": {
+      "label_it": "prima guerra mondiale",
+      "label_en": "World War I"
+    },
+    "Q652": {
+      "label_it": "italiano",
+      "label_en": "Italian"
     }
   }
 }

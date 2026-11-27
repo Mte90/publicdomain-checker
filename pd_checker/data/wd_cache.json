@@ -688,6 +688,172 @@
       "label_en": "A. Dellerano",
       "result": "not_found",
       "checked": "2026-11-27"
+    },
+    "14º Reggimento fanteria «Pinerolo»": {
+      "qid": "Q97579226",
+      "label_it": "14º Reggimento fanteria \"Pinerolo\"",
+      "label_en": "14 infantry regiment Pinerolo",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "9º Reggimento «Lancieri di Firenze»": {
+      "qid": null,
+      "label_it": "9º Reggimento «Lancieri di Firenze»",
+      "label_en": "9º Reggimento «Lancieri di Firenze»",
+      "result": "not_found",
+      "checked": "2026-11-27"
+    },
+    "Dragoni Toscani": {
+      "qid": null,
+      "label_it": "Dragoni Toscani",
+      "label_en": "Dragoni Toscani",
+      "result": "not_found",
+      "checked": "2026-11-27"
+    },
+    "36º Reggimento fanteria «Pistoia»": {
+      "qid": null,
+      "label_it": "36º Reggimento fanteria «Pistoia»",
+      "label_en": "36º Reggimento fanteria «Pistoia»",
+      "result": "not_found",
+      "checked": "2026-11-27"
+    },
+    "60º Reggimento fanteria": {
+      "qid": "Q3599502",
+      "label_it": "60º Reggimento fanteria",
+      "label_en": "60º Reggimento fanteria \"Calabria\"",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Scuola militare di Modena": {
+      "qid": null,
+      "label_it": "Scuola militare di Modena",
+      "label_en": "Scuola militare di Modena",
+      "result": "not_found",
+      "checked": "2026-11-27"
+    },
+    "Bersaglieri": {
+      "qid": "Q827218",
+      "label_it": "Bersaglieri",
+      "label_en": "Bersaglieri",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Regia Marina": {
+      "qid": "Q855186",
+      "label_it": "Regia Marina",
+      "label_en": "Royal Italian Navy",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Guerra italo-turca": {
+      "qid": "Q203824",
+      "label_it": "guerra italo-turca",
+      "label_en": "Italo-Turkish War",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Accademia militare di Modena": {
+      "qid": null,
+      "label_it": "Accademia militare di Modena",
+      "label_en": "Accademia militare di Modena",
+      "result": "ambiguous",
+      "candidates": [
+        {
+          "qid": "Q1934874",
+          "label": "Military Academy of Modena",
+          "description": "Italian military school in Modena (1815–)"
+        },
+        {
+          "qid": "Q1054370",
+          "label": "Ducal Palace of Modena",
+          "description": "building in Modena, Italy"
+        }
+      ],
+      "checked": "2026-11-27"
+    },
+    "Collegio militare di Roma": {
+      "qid": null,
+      "label_it": "Collegio militare di Roma",
+      "label_en": "Collegio militare di Roma",
+      "result": "not_found",
+      "checked": "2026-11-27"
+    },
+    "Carabinieri": {
+      "qid": "Q54852",
+      "label_it": "Carabinieri",
+      "label_en": "Carabinieri",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Brigata Pinerolo": {
+      "qid": null,
+      "label_it": "Brigata Pinerolo",
+      "label_en": "Brigata Pinerolo",
+      "result": "not_found",
+      "checked": "2026-11-27"
+    },
+    "Brigata Pistoia": {
+      "qid": null,
+      "label_it": "Brigata Pistoia",
+      "label_en": "Brigata Pistoia",
+      "result": "not_found",
+      "checked": "2026-11-27"
+    },
+    "9º Reggimento lancieri": {
+      "qid": null,
+      "label_it": "9º Reggimento lancieri",
+      "label_en": "9º Reggimento lancieri",
+      "result": "not_found",
+      "checked": "2026-11-27"
+    },
+    "Lancieri di Firenze": {
+      "qid": null,
+      "label_it": "Lancieri di Firenze",
+      "label_en": "Lancieri di Firenze",
+      "result": "not_found",
+      "checked": "2026-11-27"
+    },
+    "Cavalleria toscana": {
+      "qid": null,
+      "label_it": "Cavalleria toscana",
+      "label_en": "Cavalleria toscana",
+      "result": "not_found",
+      "checked": "2026-11-27"
+    },
+    "Military Academy of Modena": {
+      "qid": "Q1934874",
+      "label_it": "Military Academy of Modena",
+      "label_en": "Military Academy of Modena",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "7º Reggimento artiglieria": {
+      "qid": null,
+      "label_it": "7º Reggimento artiglieria",
+      "label_en": "7º Reggimento artiglieria",
+      "result": "not_found",
+      "checked": "2026-11-27"
+    },
+    "36º Reggimento fanteria": {
+      "qid": null,
+      "label_it": "36º Reggimento fanteria",
+      "label_en": "36º Reggimento fanteria",
+      "result": "not_found",
+      "checked": "2026-11-27"
+    },
+    "Prima guerra mondiale": {
+      "qid": "Q361",
+      "label_it": "prima guerra mondiale",
+      "label_en": "World War I",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Scuola Militare di Modena": {
+      "qid": "Q1934874",
+      "label_it": "Accademia militare di Modena",
+      "label_en": "Military Academy of Modena",
+      "result": "ok",
+      "checked": "2026-11-27"
     }
   }
 }

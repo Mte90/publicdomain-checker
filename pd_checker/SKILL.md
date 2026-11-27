@@ -287,6 +287,14 @@ The tool appends the annata (the item's operative reference year) automatically 
 - **No reference year**: the year part is simply omitted — never an empty gap.
 - **Retro sides**: always get the ` (retro)` suffix and their own minimal page, cross-linked via `other_versions`.
 - **Uniqueness**: `content_title` values MUST be unique within the package — they are the filename stems.
+- **Reproductions of third-party artwork**: a card that reproduces an
+  illustration, drawing or painting by a CREDITED outside author is
+  `photo_classification: artistic` with that author and his death in facts,
+  and NEVER carries an `owner_verdict` — the archive owner declares his own
+  material, not someone else's artwork (Matania/Piacentini/Despujols
+  precedent; owner corrections 2026-11-27). An unattributable plate signature
+  (a bare sigla like «Matteoda») routes as pseudonymous: anonymous, no author,
+  70 years from publication.
 - **Sanitization**: `derive_filename` rewrites the editorial colon style
   (`Titolo: dettaglio`) to the archive dash style (`Titolo - dettaglio`)
   and replaces every MediaWiki-forbidden character (: / \ ? * " < > [ ] { } | #)

@@ -1279,6 +1279,7 @@ def evaluate(item: dict, current_year: int, upload_policy: str = UPLOAD_POLICY_S
             if "tipo di documento" not in m.lower()
             and "data di produzione" not in m.lower()
             and "data di prima pubblicazione" not in m.lower()
+            and "data di morte" not in m.lower()
         ]
         # The confirmation-request note only applies when the date is NOT readable
         # from the item itself: a date written on the document (visible text,

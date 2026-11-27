@@ -125,3 +125,28 @@ def test_item_depicts_before_context_and_dedup(monkeypatch):
     assert values[0] == ("Basilica di San Benedetto (Norcia)", "extracted_facts.depicts")
     assert any(v == ("Norcia", "context.depicts") for v in values)
     assert len({s["qid"] for s in p180}) == len(p180)
+
+
+def test_language_emission_p407(monkeypatch):
+    """P407 (language of the text) fires for Italian items and stays absent otherwise."""
+    from pd_checker.core import catalogs, wikidata
+
+    monkeypatch.setattr(catalogs, "lookup", lambda name: None)
+    verdict = {
+        "extracted_facts": {
+            "document_type": "postcard",
+            "visible_text": "",
+            "images": ["Varie/x.png"],
+            "visible_text_lang": "it",
+        },
+        "status": "public_domain",
+        "commons_templates": ["{{PD-Italy}}"],
+        "upload": {"flag": "ready"},
+    }
+    block = wikidata.build(verdict, {"categories": []})
+    p407 = [s for s in block["statements"] if s["property"] == "P407"]
+    assert p407 and p407[0]["qid"] == "Q652"
+
+    verdict["extracted_facts"]["visible_text_lang"] = None
+    block2 = wikidata.build(verdict, {"categories": []})
+    assert not [s for s in block2["statements"] if s["property"] == "P407"]

@@ -1561,6 +1561,25 @@ def _generate_html(verdicts: list[dict], images_base: str | None, ctx: any, run_
           window.scrollTo(0, savedScrollY);
         }}
         window.addEventListener('hashchange', syncLightboxes);
+        document.addEventListener('click', function (event) {{
+          var a = event.target.closest && event.target.closest('.nav-item');
+          if (!a) {{ return; }}
+          var id = (a.getAttribute('href') || '').slice(1);
+          var target = id && document.getElementById(id);
+          if (!target) {{ return; }}
+          event.preventDefault();
+          /* A filtered-out card has height 0 and scrollIntoView would do
+             nothing: reset both filter groups to "Tutti" so the target
+             becomes visible, then scroll (owner report 2026-11-27). */
+          if (target.getBoundingClientRect().height === 0) {{
+            ['filter-status-all', 'filter-upload-all'].forEach(function (fid) {{
+              var r = document.getElementById(fid);
+              if (r && !r.checked) {{ r.checked = true; }}
+            }});
+          }}
+          target.scrollIntoView({{ behavior: 'smooth', block: 'start' }});
+          try {{ history.replaceState(null, '', '#' + id); }} catch (e) {{}}
+        }});
         document.addEventListener('keydown', function (event) {{
           if (event.key === 'Escape') {{ closeLightbox(); }}
         }});

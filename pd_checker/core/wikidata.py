@@ -35,6 +35,8 @@ P1480 = "P1480"  # circostanze della fonte
 
 # Class QIDs
 Q_POSTCARD = "Q192425"
+Q_ITALIAN_LANG = "Q652"
+P407 = "P407"  # lingua del testo
 Q_PHOTO = "Q125191"
 Q_PUBLIC_DOMAIN = "Q19652"
 Q_COPYRIGHTED = "Q50423863"
@@ -106,6 +108,18 @@ def _build_statements(verdict: dict, ctx: dict) -> list[dict]:
             "status": "ok",
         })
     # else: no statement for unknown types
+    
+    # P407: lingua del testo (visible_text_lang, only Italian supported)
+    text_lang = (extracted.get("visible_text_lang") or "").lower()
+    if text_lang in ("it", "italian", "italiano"):
+        statements.append({
+            "property": P407,
+            "label": "lingua del testo",
+            "value": "italiano",
+            "qid": Q_ITALIAN_LANG,
+            "source": "extracted_facts.visible_text_lang",
+            "status": "ok",
+        })
     
     # P6216: stato copyright
     if status == "public_domain":

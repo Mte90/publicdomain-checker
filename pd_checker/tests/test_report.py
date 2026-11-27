@@ -24,3 +24,15 @@ def test_dashboard_filters_use_has_selectors():
     html = report._generate_html([], None, {}, {}, "pd-only")
     assert ":has(#filter-status-public_domain:checked) .card:not(.filter-status-public_domain)" in html
     assert "~ .main-content" not in html
+
+
+def test_sidebar_nav_delegated_scroll():
+    """Sidebar links scroll via scrollIntoView: plain hash anchors did not
+    scroll to the cards (owner report 2026-11-27) — the JS handler works in
+    every scroll container and updates the hash without firing hashchange."""
+    from pd_checker.core import report
+
+    html = report._generate_html([], None, {}, {}, "pd-only")
+    assert "closest('.nav-item')" in html
+    assert "target.scrollIntoView({ behavior: 'smooth', block: 'start' })" in html
+    assert "['filter-status-all', 'filter-upload-all']" in html
