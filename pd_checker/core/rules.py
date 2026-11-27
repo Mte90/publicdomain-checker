@@ -909,6 +909,7 @@ _FACTS_FIELDS = (
     "year_source", "visible_text", "visible_text_translation", "visible_text_lang",
     "translation_lang", "has_identifiable_people", "has_handwriting", "vlm_confidence", "set_id", "part", "series_id",
     "date_evidence", "images", "postmark", "publisher", "is_vatican_asset", "content_title", "ocr_texts", "owner_verdict",
+    "commons_categories",
 )
 
 
@@ -1273,12 +1274,27 @@ def evaluate(item: dict, current_year: int, upload_policy: str = UPLOAD_POLICY_S
         verdict["legal_basis"] = sorted(
             set(verdict.get("legal_basis", [])) | {"dichiarazione esplicita del proprietario (revisione umana)"}
         )
-        verdict["notes"] = verdict.get("notes", []) + [
-            "Verdetto fondato sulla dichiarazione del proprietario, non su un anno leggibile dall'oggetto: la data resta da confermare.",
-            "{{PD-1996}} non allegato: senza anno di pubblicazione l'idoneita' URAA non e' provabile.",
-        ]
         verdict["missing_data"] = [
             m for m in verdict.get("missing_data", []) if "tipo di documento" not in m.lower()
+        ]
+        # The confirmation-request note only applies when the date is NOT readable
+        # from the item itself: a date written on the document (visible text,
+        # postmark, manuscript fill) is THE date, owner ruling 2026-11-27.
+        if (
+            item.get("reference_year") is not None
+            and item.get("year_source") in ("visible_text", "postmark", "manuscript")
+        ):
+            date_note = (
+                f"Verdetto fondato sulla dichiarazione del proprietario dell'archivio; "
+                f"la data \u00e8 documentata sul pezzo (fonte: {item.get('year_source')})."
+            )
+        else:
+            date_note = (
+                "Verdetto fondato sulla dichiarazione del proprietario, non su un anno leggibile dall'oggetto: la data resta da confermare."
+            )
+        verdict["notes"] = verdict.get("notes", []) + [
+            date_note,
+            "{{PD-1996}} non allegato: senza anno di pubblicazione l'idoneita' URAA non e' provabile.",
         ]
         verdict["human_review_required"] = bool(verdict["blockers_non_copyright"])
 

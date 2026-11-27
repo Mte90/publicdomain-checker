@@ -27,18 +27,37 @@ def load(folder: str) -> dict | None:
     """
     folder_path = Path(folder)
 
-    # Try pubdom.json first (consolidated portable artifact)
+    # pd_data/context.json (or legacy context.json/context.md) is the durable,
+    # user-editable configuration: when both exist, its keys win over the
+    # pubdom.json context section per key (nested dicts merge, file leaves win).
+    # Without this, a stale valueinside pubdom.json regenerates itself forever.
+    file_ctx = _load_context_file(folder_path)
+
     pubdom_path = folder_path / "pubdom.json"
+    pubdom_ctx = None
     if pubdom_path.exists():
         try:
             pubdom = json.loads(pubdom_path.read_text(encoding="utf-8"))
-            if isinstance(pubdom, dict) and "context" in pubdom:
-                ctx = pubdom["context"]
-                if isinstance(ctx, dict):
-                    return ctx
+            if isinstance(pubdom, dict) and isinstance(pubdom.get("context"), dict):
+                pubdom_ctx = pubdom["context"]
         except (json.JSONDecodeError, OSError):
             pass
 
+    if file_ctx and pubdom_ctx:
+        merged = dict(pubdom_ctx)
+        for key, value in file_ctx.items():
+            if isinstance(value, dict) and isinstance(merged.get(key), dict):
+                merged[key] = {**merged[key], **value}
+            else:
+                merged[key] = value
+        return merged
+    if file_ctx or pubdom_ctx:
+        return file_ctx or pubdom_ctx
+    return None
+
+
+def _load_context_file(folder_path: Path) -> dict | None:
+    """Load the durable context file: pd_data/context.json, context.json, context.md."""
     # Try pd_data/context.json (preferred location)
     json_path = folder_path / "pd_data" / "context.json"
     if json_path.exists():

@@ -1383,3 +1383,73 @@ def test_owner_verdict_keeps_non_copyright_blockers():
     assert verdict["status"] == engine.PUBLIC_DOMAIN
     assert any("96-97" in b for b in verdict["blockers_non_copyright"])
     assert verdict["upload"]["flag"] == engine.UPLOAD_REVIEW
+
+
+# =============================================================================
+# Context load: file context wins per key over the pubdom context section
+# =============================================================================
+
+def test_context_load_file_wins_over_stale_pubdom(tmp_path):
+    """A key fixed in pd_data/context.json must not be resurrected from pubdom.json."""
+    import json
+    from pd_checker.core import context
+
+    (tmp_path / "pubdom.json").write_text(json.dumps({
+        "context": {
+            "provenance": "_VECCHIA_ inventario della cartella",
+            "collection": "Collezione",
+            "owner_declarations": {"a": {"verdict": "vecchio"}},
+        }
+    }), encoding="utf-8")
+    (tmp_path / "pd_data").mkdir()
+    (tmp_path / "pd_data" / "context.json").write_text(json.dumps({
+        "provenance": "Archivio di Daniele Scasciafratte",
+        "owner_declarations": {"b": {"verdict": "nuovo"}},
+    }), encoding="utf-8")
+
+    ctx = context.load(str(tmp_path))
+    assert ctx["provenance"] == "Archivio di Daniele Scasciafratte"
+    assert ctx["collection"] == "Collezione"  # key solo in pubdom: preserved
+    assert ctx["owner_declarations"] == {"a": {"verdict": "vecchio"}, "b": {"verdict": "nuovo"}}
+
+
+def test_context_load_pubdom_only_falls_back(tmp_path):
+    import json
+    from pd_checker.core import context
+
+    (tmp_path / "pubdom.json").write_text(json.dumps({
+        "context": {"provenance": "solo pubdom"}
+    }), encoding="utf-8")
+    assert context.load(str(tmp_path))["provenance"] == "solo pubdom"
+
+
+def test_item_commons_categories_override_context():
+    """Content-based per-item categories (facts commons_categories) replace the folder context's."""
+    from pd_checker.core import wikidata
+
+    verdict = {
+        "extracted_facts": {
+            "document_type": "photo",
+            "reference_year": 1936,
+            "commons_categories": [
+                'Category:94º Reggimento fanteria "Messina"',
+                "Category:Infantry regiments of Italy",
+            ],
+        },
+        "status": "public_domain",
+        "commons_templates": ["{{PD-Italy}}"],
+        "upload": {"flag": "review"},
+    }
+    ctx = {"categories": ["Category:Rieti"], "provenance": "Archivio di Daniele Scasciafratte"}
+
+    result = wikidata.build(verdict, ctx)
+    assert result["categories"] == [
+        'Category:94º Reggimento fanteria "Messina"',
+        "Category:Infantry regiments of Italy",
+    ]
+    assert "Category:Rieti" not in result["categories"]
+
+    # fallback: item without its own declaration keeps the context categories
+    verdict2 = {**verdict, "extracted_facts": {"document_type": "photo"}}
+    result2 = wikidata.build(verdict2, ctx)
+    assert result2["categories"] == ["Category:Rieti"]

@@ -143,10 +143,11 @@ def _build_statements(verdict: dict, ctx: dict) -> list[dict]:
     ref_year = extracted.get("reference_year")
     year_source = extracted.get("year_source")
     if ref_year is not None:
-        # Determine if this is an estimate
-        # Estimate when: visual_estimate, or year present but source missing/not trusted
+        # Documentary dates are the date: printed, postmarked or WRITTEN on the
+        # document (manuscript) — none of them needs review. Only non-documentary
+        # sources remain estimates: visual guesses, folder knowledge, none.
         is_estimated = year_source == "visual_estimate" or (
-            year_source is None or year_source not in ("visible_text", "postmark")
+            year_source is None or year_source not in ("visible_text", "postmark", "manuscript")
         )
         
         # Build ISO time string with year precision (month/day = 00)
@@ -460,8 +461,13 @@ def build(verdict: dict, ctx: dict) -> dict:
     # Build {{Information}} block (required by Commons)
     information = _build_information(verdict, ctx)
     
-    # Categories from context
-    categories = list(ctx.get("categories", []))
+    # Categories: per-item content-based when declared in facts, else folder context
+    extracted_for_cat = verdict.get("extracted_facts", {})
+    declared_cats = extracted_for_cat.get("commons_categories")
+    if declared_cats:
+        categories = list(declared_cats)
+    else:
+        categories = list(ctx.get("categories", []))
     
     # FIX 3: No more zero-category verdicts for IT postcards
     # Always propose "Category:Postcards of Italy" for Italian postcards

@@ -29,3 +29,26 @@ def test_p180_miner_skips_stopwords(monkeypatch):
     p180_values = [s["value"] for s in block["statements"] if s["property"] == "P180"]
     assert "circa" not in p180_values
     assert "Rieti" in p180_values
+
+
+def test_p571_manuscript_date_is_documentary():
+    """A date WRITTEN on the document (manuscript) is THE date: status ok, no circa, no review ask."""
+    from pd_checker.core import wikidata
+
+    verdict = {
+        "extracted_facts": {
+            "document_type": "manuscript",
+            "reference_year": 1918,
+            "year_source": "manuscript",
+        },
+        "status": "public_domain",
+        "commons_templates": ["{{PD-Italy-EdictGov}}"],
+        "upload": {"flag": "ready"},
+    }
+    result = wikidata.build(verdict, {"categories": ["Category:Identity documents of Italy"]})
+    p571 = next(s for s in result["statements"] if s["property"] == "P571")
+    assert p571["status"] == "ok"
+    assert p571["time"] == "+1918-00-00T00:00:00Z"
+    assert p571["precision"] == 9
+    assert "qualifiers" not in p571
+    assert "reason" not in p571

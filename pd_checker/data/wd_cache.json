@@ -1,6 +1,6 @@
 {
   "note": "Name → Wikidata QID lookups. This is the only source of QIDs; maintained via the update/resolve flow.",
-  "fetched": "2026-11-26",
+  "fetched": "2026-11-27",
   "names": {
     "Raffaele Merry del Val": {
       "qid": "Q507540",
@@ -232,6 +232,80 @@
       "label_en": "Town hall of Rieti",
       "result": "ok",
       "checked": "2026-11-26"
+    },
+    "Teatro Flavio": {
+      "qid": "Q3981982",
+      "label_it": "Teatro Flavio Vespasiano",
+      "label_en": "Teatro Flavio Vespasiano",
+      "result": "ok",
+      "checked": "2026-11-26",
+      "note": "alias curatoriale: nel contesto rietino «Teatro Flavio» = Teatro Flavio Vespasiano (Q3981982)"
+    },
+    "Siena": {
+      "qid": "Q2751",
+      "label_it": "Siena",
+      "label_en": "Siena",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Il Sodoma": {
+      "qid": "Q8506",
+      "label_it": "Il Sodoma",
+      "label_en": "Il Sodoma",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Chiesa di San Domenico Siena": {
+      "qid": null,
+      "label_it": "Chiesa di San Domenico Siena",
+      "label_en": "Chiesa di San Domenico Siena",
+      "result": "not_found",
+      "checked": "2026-11-27"
+    },
+    "Santa Caterina da Siena": {
+      "qid": "Q229190",
+      "label_it": "Teatro Flavio Vespasiano",
+      "label_en": "Teatro Flavio Vespasiano",
+      "result": "ok",
+      "checked": "2026-11-26",
+      "note": "correzione: Q3672904 era la chiesa di Livorno, non la santa",
+      "source": "curated: matched label verified live (2026-11-27)"
+    },
+    "Santa Caterina": {
+      "qid": "Q229190",
+      "label_it": "Teatro Flavio Vespasiano",
+      "label_en": "Teatro Flavio Vespasiano",
+      "result": "ok",
+      "checked": "2026-11-26",
+      "note": "alias per il testo a stampa «Santa Caterina» (ambito Siena, cartolina)",
+      "source": "curated: matched label verified live (2026-11-27)"
+    },
+    "Sodoma": {
+      "qid": "Q8506",
+      "label_it": "Teatro Flavio Vespasiano",
+      "label_en": "Teatro Flavio Vespasiano",
+      "result": "ok",
+      "checked": "2026-11-26",
+      "note": "alias per il testo a stampa «…e Sodoma Ave…» (Il Sodoma, Q8506)",
+      "source": "curated: matched label verified live (2026-11-27)"
+    },
+    "Chiesa di S. Domenico": {
+      "qid": "Q810075",
+      "label_it": "Teatro Flavio Vespasiano",
+      "label_en": "Teatro Flavio Vespasiano",
+      "result": "ok",
+      "checked": "2026-11-26",
+      "note": "alias per il testo a stampa «Siena - Chiesa di S. Domenico» (basilica di San Domenico, Siena)",
+      "source": "curated: matched label verified live (2026-11-27)"
+    },
+    "94° Fanteria": {
+      "qid": "Q3600191",
+      "label_it": "Teatro Flavio Vespasiano",
+      "label_en": "Teatro Flavio Vespasiano",
+      "result": "ok",
+      "checked": "2026-11-26",
+      "note": "alias per il testo a stampa «94° FANTERIA» (94º Reggimento fanteria, Q3600191)",
+      "source": "curated: matched label verified live (2026-11-27)"
     }
   }
 }

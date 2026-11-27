@@ -1,7 +1,7 @@
 {
   "note": "Wikidata property and item catalog for pd_checker validation. Fetched via wbgetentities API.",
   "source": "https://www.wikidata.org/w/api.php",
-  "fetched": "2026-11-20",
+  "fetched": "2026-11-27",
   "properties": {
     "P31": {
       "label_it": "istanza di",
@@ -143,6 +143,22 @@
     "Q78585": {
       "label_it": "Leo Fall",
       "label_en": "Leo Fall"
+    },
+    "Q2751": {
+      "label_it": "Siena",
+      "label_en": "Siena"
+    },
+    "Q8506": {
+      "label_it": "Il Sodoma",
+      "label_en": "Il Sodoma"
+    },
+    "Q229190": {
+      "label_it": "Caterina da Siena",
+      "label_en": "Catherine of Siena"
+    },
+    "Q810075": {
+      "label_it": "basilica di San Domenico",
+      "label_en": "Basilica of San Domenico"
     }
   }
 }

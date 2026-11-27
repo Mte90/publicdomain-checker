@@ -671,6 +671,16 @@ def _generate_html(verdicts: list[dict], images_base: str | None, ctx: any, run_
       padding-bottom: var(--spacing-sm);
       border-bottom: 1px solid var(--border-soft);
     }}
+    .two-col {{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-md);
+    }}
+    @media (max-width: 720px) {{
+      .two-col {{
+        grid-template-columns: 1fr;
+      }}
+    }}
     .meta-row {{
       display: flex;
       gap: var(--spacing-lg);
@@ -1230,15 +1240,7 @@ def _generate_html(verdicts: list[dict], images_base: str | None, ctx: any, run_
                     if details:
                         wd_html += f'<ul class="wd-reasons">{"".join(details)}</ul>'
                 
-                # Handle both "categories" and "proposed_categories"
-                categories = wd_data.get("categories") or wd_data.get("proposed_categories")
-                if categories:
-                    wd_html += '<h5 class="block-subtitle">Categorie Proposte</h5><ul class="wd-cats">'
-                    for cat in categories:
-                        # Render as link to Wikimedia Commons category
-                        encoded_cat = cat.replace(" ", "_")
-                        wd_html += f'<li><a href="https://commons.wikimedia.org/wiki/Category:{encoded_cat}" target="_blank" rel="noopener">{cat}</a></li>'
-                    wd_html += '</ul>'
+                # Categories moved to the dedicated two-column block (Licenze e Template | Categorie)
                 
                 # Handle both "information" and "info"
                 info = wd_data.get("information") or wd_data.get("info")
@@ -1314,6 +1316,27 @@ def _generate_html(verdicts: list[dict], images_base: str | None, ctx: any, run_
                 licence_html = f'<div class="licence-block"><h4 class="block-title">Licenze e Template</h4><ul class="licence-list">{"".join(licence_items)}</ul></div>'
             else:
                 licence_html = '<div class="licence-block"><h4 class="block-title">Licenze e Template</h4><p class="no-licence">Nessun template disponibile</p></div>'
+
+            # Categories column - content-based per item, links to Commons
+            item_categories = (
+                (v.get("wikidata") or {}).get("categories")
+                or v.get("categories")
+                or v.get("commons_categories")
+                or v.get("proposed_categories")
+                or []
+            )
+            if item_categories:
+                cat_items = []
+                for cat in item_categories:
+                    encoded_cat = cat.replace(" ", "_")
+                    cat_items.append(
+                        f'<li class="cat-tag"><a href="https://commons.wikimedia.org/wiki/Category:{encoded_cat}" '
+                        f'target="_blank" rel="noopener">{html.escape(cat)}</a></li>'
+                    )
+                cats_html = f'<div class="licence-block cats-block"><h4 class="block-title">Categorie</h4><ul class="licence-list">{"".join(cat_items)}</ul></div>'
+            else:
+                cats_html = '<div class="licence-block cats-block"><h4 class="block-title">Categorie</h4><p class="no-licence">Nessuna categoria</p></div>'
+            licence_cats_html = f'<div class="two-col">{licence_html}{cats_html}</div>'
             
             # Country candidates section - FIX: Only show when country is unknown AND candidates exist
             # When country_of_origin is set, hide the section entirely
@@ -1454,7 +1477,7 @@ def _generate_html(verdicts: list[dict], images_base: str | None, ctx: any, run_
                 </div>
                 {f'<div class="human-review"><strong class="review-label">Richiesta revisione umana:</strong> {v.get("human_review_reason", "N/A")}</div>' if v.get("human_review") else ''}
                 {f'<div class="shorter-term"><strong class="term-label">Termine più breve:</strong> {v.get("shorter_term", "N/A")}</div>' if v.get("shorter_term") else ''}
-                {licence_html}
+                {licence_cats_html}
                 {country_html}
                 {wd_html}
                 <div class="trail-block">

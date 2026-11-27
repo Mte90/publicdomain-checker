@@ -29,7 +29,7 @@ Il codice e i metadati generati (pubdom.json, dashboard, dichiarazioni Wikidata)
 
 5. **Se una persona o un editore del pezzo non è su Wikidata**, la dashboard te lo dice nella lista dettagli («Assente su Wikidata»): puoi lasciare così — il nome resta comunque nel wikitext della pagina file — oppure creare l'item tu e sistemare tutto con un solo comando: vedi «Completare le entità mancanti» nel blocco caricamento qui sotto.
 
-6. **Carica quando gli elementi sono *Pronto*.** Il caricamento parte sempre in dry-run: `push` mostra cosa invierebbe, senza rete e senza credenziali. Prima dell'invio, `preflight` verifica il pacchetto (duplicati su Commons, template e categorie) e segnala ogni blocco con il motivo. L'invio vero richiede `--live` e le tue credenziali Wikimedia, un token OAuth owner-only o una bot password: la procedura completa per crearle è nel blocco sviluppatori qui sotto. I file già esistenti su Commons non vengono mai sovrascritti.
+6. **Carica quando gli elementi sono *Pronto*.** Il caricamento parte sempre in dry-run: `push` mostra cosa invierebbe, senza rete e senza credenziali. Prima dell'invio, `preflight` verifica il pacchetto (duplicati su Commons, template e categorie) e segnala ogni blocco con il motivo. L'invio vero richiede `--live` e le tue credenziali Wikimedia, un token OAuth owner-only o una bot password: la procedura completa per crearle è nel blocco sviluppatori qui sotto. I file già esistenti su Commons non vengono mai sovrascritti. Dopo l'upload (e sui file dell'archivio già presenti), `push` aggancia anche i dati strutturati (SDC) del pacchetto: solo i claim mancanti, mai duplicati.
 
 ## Come si decide il verdetto
 
@@ -55,7 +55,7 @@ Fonti primarie: L. 633/1941 · L. 182/2025 art. 47 · Direttive 93/98/CEE e 2006
 
 ## Limiti
 
-Il verdetto è tanto buono quanto l'estrazione: un errore di lettura (una data, un nome) si propaga al verdetto, per questo la dashboard mostra l'evidenza della data da verificare. Un nome assente dalla cache non riceve QID e resta `da_rivedere`. I termini UK e USA sono verificati sulle fonti primarie e fissati nel motore; le dichiarazioni Wikidata strutturate restano un passaggio manuale.
+Il verdetto è tanto buono quanto l'estrazione: un errore di lettura (una data, un nome) si propaga al verdetto, per questo la dashboard mostra l'evidenza della data da verificare. Un nome assente dalla cache non riceve QID e resta `da_rivedere`. I termini UK e USA sono verificati sulle fonti primarie e fissati nel motore; i dati strutturati su Commons li aggancia `push` dopo l'upload (solo i claim mancanti, idempotente).
 
 ## Percorso da riga di comando / per sviluppatori
 

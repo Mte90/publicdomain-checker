@@ -474,7 +474,9 @@ class TestLiveMode:
              patch.object(push, 'create_opener') as mock_opener, \
              patch.object(push, 'get_csrf_token') as mock_csrf, \
              patch.object(push, 'upload_file') as mock_upload, \
-             patch.object(push, '_check_existing_files') as mock_check:
+             patch.object(push, '_check_existing_files') as mock_check, \
+             patch.object(push, '_attach_sdc_claims') as mock_sdc:
+            mock_sdc.return_value = (0, 0)
             
             # Setup mocks
             mock_creds.return_value = {
@@ -501,7 +503,9 @@ class TestLiveMode:
              patch.object(push, 'login_bot_password') as mock_login, \
              patch.object(push, 'get_csrf_token') as mock_csrf, \
              patch.object(push, 'upload_file') as mock_upload, \
-             patch.object(push, '_check_existing_files') as mock_check:
+             patch.object(push, '_check_existing_files') as mock_check, \
+             patch.object(push, '_attach_sdc_claims') as mock_sdc:
+            mock_sdc.return_value = (0, 0)
             
             # Setup mocks
             mock_creds.return_value = {
@@ -532,7 +536,9 @@ class TestLiveMode:
              patch.object(push, 'login_bot_password') as mock_login, \
              patch.object(push, 'get_csrf_token') as mock_csrf, \
              patch.object(push, 'upload_file') as mock_upload, \
-             patch.object(push, '_check_existing_files') as mock_check:
+             patch.object(push, '_check_existing_files') as mock_check, \
+             patch.object(push, '_attach_sdc_claims') as mock_sdc:
+            mock_sdc.return_value = (0, 0)
             
             mock_creds.return_value = {
                 "oauth_token": None,
@@ -760,7 +766,9 @@ class TestMultiImageUpload:
         with patch.object(push, 'get_credentials') as mock_creds, \
              patch.object(push, 'create_opener') as mock_opener, \
              patch.object(push, 'get_csrf_token') as mock_csrf, \
-             patch.object(push, 'upload_file') as mock_upload:
+             patch.object(push, 'upload_file') as mock_upload, \
+             patch.object(push, '_attach_sdc_claims') as mock_sdc:
+            mock_sdc.return_value = (0, 0)
             
             # Setup mocks
             mock_creds.return_value = {
@@ -1310,3 +1318,60 @@ def test_check_existing_files_negative_pageids_are_missing():
         _FakeOpener(payload), ["A.png", "B.png", "C.png", "D.png"], {"contact": "test"}
     )
     assert existing == {"D.png"}
+
+
+# =============================================================================
+# Structured data (SDC) in push: claim mapping and dedup (no network)
+# =============================================================================
+
+def test_sdc_claim_from_item_statement():
+    claim, reason = push._claim_from_statement({"property": "P180", "qid": "Q3981982"})
+    assert reason == ""
+    assert claim["mainsnak"]["property"] == "P180"
+    assert claim["mainsnak"]["datavalue"] == {
+        "value": {"entity-type": "item", "id": "Q3981982", "numeric-id": 3981982},
+        "type": "wikibase-entityid",
+    }
+    assert claim["type"] == "statement"
+
+
+def test_sdc_claim_from_time_statement_keeps_circa():
+    claim, reason = push._claim_from_statement({
+        "property": "P571", "time": "+1928-01-01T00:00:00Z", "precision": 9,
+        "qualifiers": [{"property": "P1480", "qid": "Q5727902"}],
+    })
+    assert reason == ""
+    assert claim["mainsnak"]["datavalue"]["type"] == "time"
+    assert claim["mainsnak"]["datavalue"]["value"]["time"] == "+1928-01-01T00:00:00Z"
+    assert claim["mainsnak"]["datavalue"]["value"]["precision"] == 9
+    assert claim["qualifiers"][0]["property"] == "P1480"
+    assert claim["qualifiers"][0]["datavalue"]["value"]["id"] == "Q5727902"
+    assert claim["qualifiers"][0]["datavalue"]["type"] == "wikibase-entityid"
+
+
+def test_sdc_claim_skips_incomplete_statement():
+    claim, reason = push._claim_from_statement({"property": "P123", "qid": None, "time": None})
+    assert claim is None
+    assert reason
+
+
+def test_sdc_missing_claims_never_duplicates_existing():
+    existing = {("P180", "Q3981982"), ("P6216", "Q19652")}
+    statements = [
+        {"property": "P180", "qid": "Q3981982"},
+        {"property": "P6216", "qid": "Q19652"},
+        {"property": "P180", "qid": "Q13396"},
+        {"property": "P571", "qid": None},
+    ]
+    new_claims, skipped = push._missing_claims(statements, existing)
+    assert [c["mainsnak"]["datavalue"]["value"]["id"] for c in new_claims] == ["Q13396"]
+    assert len(skipped) == 3  # 2 già presenti + 1 incompleto
+
+
+def test_sdc_eligible_counts_only_ready_statements():
+    statements = [
+        {"property": "P180", "qid": "Q1"},
+        {"property": "P123", "qid": None, "time": None},
+        {"property": "P571", "time": "+1928-01-01T00:00:00Z", "precision": 9},
+    ]
+    assert push._sdc_eligible(statements) == 2

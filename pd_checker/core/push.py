@@ -115,12 +115,9 @@ def build_wikitext(item: dict, other_versions: str | None = None, tracking_categ
         marker in (author_from_info or "").lower()
         for marker in ["stab.", "tipografia", "arti grafiche", "stamperia", "editore"]
     ):
+        # The imprint stays in the description (already in the transcription):
+        # |source= carries only the archive attribution.
         author_display = "{{unknown|author}}"
-        # Put imprint in source or description
-        if publisher:
-            source = f"{source} (imprint: {publisher})"
-        elif author_from_info:
-            source = f"{source} (imprint: {author_from_info})"
     else:
         author_display = author_from_info if author_from_info else "{{unknown|author}}"
     
@@ -796,7 +793,14 @@ def cmd_push(argv: list[str], live: bool = False) -> int:
                 results.append({"item": item_num, "status": "skip", "reason": "no images"})
                 continue
         
-        # Resolve every image to an existing path before planning anything
+        # Front filename first: both the upload plan and the structured-data
+        # attach below need it, even when the local source image is gone
+        # (file already on Commons, sources pruned after publication).
+        front_filename = derive_filename(item, prefix, item_num, total_items)
+        front_stem = Path(front_filename).stem
+        ext = Path(front_filename).suffix
+
+        # Resolve every image to an existing path (the upload needs the files)
         sides = []
         for side_idx, name in enumerate(image_names):
             img_path = _resolve_image_path(folder, name)
@@ -806,12 +810,8 @@ def cmd_push(argv: list[str], live: bool = False) -> int:
                 sides.append((side_idx, img_path))
         if not sides:
             results.append({"item": item_num, "status": "skip", "reason": "image not found"})
-            continue
         
-        # Plan side filenames first: the wikitext of each side must link to the others
-        front_filename = derive_filename(item, prefix, item_num, total_items)
-        front_stem = Path(front_filename).stem
-        ext = Path(front_filename).suffix
+        # Plan side filenames: the wikitext of each side must link to the others
         planned = []
         for side_idx, img_path in sides:
             if side_idx == 0:
@@ -839,7 +839,7 @@ def cmd_push(argv: list[str], live: bool = False) -> int:
                 )
             
             # Upload comment
-            comment = f"Upload da pd-checker (item {item_num}, side {side_idx + 1})"
+            comment = "Upload da pd-checker"
             
             # Check if file already exists (live mode only)
             if live and planned_titles:
@@ -897,6 +897,27 @@ def cmd_push(argv: list[str], live: bool = False) -> int:
                 print(f"  Comment: {comment}")
                 print()
                 results.append({"item": item_num, "status": "dry-run", "filename": filename, "side": side_idx + 1})
+
+        # SDC (structured data): the item's package claims attach to the front
+        # file only, after its sides are done — missing claims only, existing
+        # claims are never touched nor duplicated. Items whose local files are
+        # absent are skipped entierely: no upload, no SDC (owner rule 2026-11-27).
+        if sides:
+            statements = (item.get("wikidata") or {}).get("statements", [])
+            front_uploaded = any(
+                r.get("item") == item_num and r.get("status") == "success" and r.get("filename") == front_filename
+                for r in results
+            )
+            if live and (front_uploaded or front_filename in existing_titles):
+                _attach_sdc_claims(opener, statements, front_filename, item_num, csrf_token, credentials)
+            elif live:
+                eligible = _sdc_eligible(statements)
+                if eligible:
+                    print(f"[SDC] {front_filename}: file non su Commons, {eligible} claim non aggiunti")
+            else:
+                eligible = _sdc_eligible(statements)
+                if eligible:
+                    print(f"[SDC] {front_filename}: {eligible} claim dal pacchetto (in --live aggiunti solo se mancanti)")
     
     # Summary
     print("\n== Summary ==")
@@ -978,6 +999,175 @@ def _check_existing_files(opener: urllib.request.OpenerDirector, titles: list[st
     return existing
 
 
+# =============================================================================
+# Structured Data on Commons (SDC): attach the package statements to the front
+# file entity (M<pageid>) after upload. Only cache-verified QIDs and complete
+# time statements are eligible; existing claims are never duplicated.
+# =============================================================================
+
+_SDW_CALENDAR = "http://www.wikidata.org/entity/Q1985727"  # proleptic Gregorian
+
+
+def _item_datavalue(qid: str) -> dict:
+    # Canonical Wikibase serialization: the write API (wbeditentity) rejects the
+    # flat form — "Not an array or missing the key \"type\"" is the symptom.
+    return {
+        "value": {"entity-type": "item", "id": qid, "numeric-id": int(qid[1:])},
+        "type": "wikibase-entityid",
+    }
+
+
+def _claim_from_statement(stmt: dict) -> tuple[dict | None, str]:
+    """Map one package statement to an SDC claim. Returns (claim, skip-reason)."""
+    prop = stmt.get("property") or ""
+    if not prop.startswith("P"):
+        return None, f"proprieta' non valida: {prop!r}"
+    if stmt.get("qid"):
+        mainsnak = {"snaktype": "value", "property": prop, "datavalue": _item_datavalue(stmt["qid"])}
+    elif stmt.get("time") and stmt.get("precision"):
+        mainsnak = {
+            "snaktype": "value", "property": prop,
+            "datavalue": {
+                "value": {
+                    "time": stmt["time"], "precision": stmt["precision"],
+                    "timezone": 0, "before": 0, "after": 0, "calendarmodel": _SDW_CALENDAR,
+                },
+                "type": "time",
+            },
+        }
+    else:
+        return None, "senza QID ne' data completa"
+    claim = {"mainsnak": mainsnak, "type": "statement"}
+    qualifiers = [
+        {"snaktype": "value", "property": "P1480", "datavalue": _item_datavalue(qual["qid"])}
+        for qual in (stmt.get("qualifiers") or [])
+        if qual.get("property") == "P1480" and qual.get("qid")
+    ]
+    if qualifiers:
+        claim["qualifiers"] = qualifiers
+    return claim, ""
+
+
+def _sdc_eligible(statements: list) -> int:
+    """Statements eligible for SDC (offline count for dry-run plans)."""
+    return sum(1 for stmt in statements if _claim_from_statement(stmt)[0] is not None)
+
+
+def _existing_mainsnaks(claims: dict) -> set:
+    """Signature set of existing SDC claims: (property, value-key)."""
+    signatures = set()
+    for prop, claim_list in (claims or {}).items():
+        for claim in claim_list:
+            dv = ((claim.get("mainsnak") or {}).get("datavalue")) or {}
+            if dv.get("type") == "wikibase-entityid":
+                signatures.add((prop, dv.get("value", {}).get("id", "")))
+            elif dv.get("type") == "time":
+                signatures.add((prop, dv.get("value", {}).get("time", "")))
+    return signatures
+
+
+def _missing_claims(statements: list, existing: set) -> tuple[list, list]:
+    """Split statements into (new_claims, skip_reasons) against existing claims."""
+    new_claims, skipped = [], []
+    for stmt in statements:
+        claim, reason = _claim_from_statement(stmt)
+        if claim is None:
+            skipped.append(f"{stmt.get('property', '?')} ({reason})")
+            continue
+        snak = claim["mainsnak"]
+        value = snak["datavalue"]["value"].get("id") or snak["datavalue"]["value"].get("time")
+        if (snak["property"], value) in existing:
+            skipped.append(f"{snak['property']} (gia' su Commons: {value})")
+            continue
+        new_claims.append(claim)
+    return new_claims, skipped
+
+
+def _pageid_for_title(opener: urllib.request.OpenerDirector, title: str, credentials: dict) -> int | None:
+    """Commons pageid of a File: title, or None if missing."""
+    params = {
+        "action": "query", "titles": f"File:{title}",
+        "prop": "info", "format": "json",
+    }
+    url = f"https://commons.wikimedia.org/w/api.php?{urllib.parse.urlencode(params)}"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": credentials["contact"]})
+        with opener.open(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        page = next(iter(data.get("query", {}).get("pages", {}).values()))
+        return page.get("pageid") if "missing" not in page else None
+    except (urllib.error.URLError, json.JSONDecodeError, StopIteration, TimeoutError) as e:
+        print(f"[SDC WARNING] query pageid fallita ({title}): {e}", file=sys.stderr)
+        return None
+
+
+def _sdc_claims_now(opener: urllib.request.OpenerDirector, entity_id: str, credentials: dict) -> dict:
+    """Current SDC claims of a Commons file entity (empty dict on failure)."""
+    params = {
+        "action": "wbgetentities", "ids": entity_id,
+        "props": "claims", "format": "json",
+    }
+    url = f"https://commons.wikimedia.org/w/api.php?{urllib.parse.urlencode(params)}"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": credentials["contact"]})
+        with opener.open(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        return data.get("entities", {}).get(entity_id, {}).get("claims", {})
+    except (urllib.error.URLError, json.JSONDecodeError, TimeoutError) as e:
+        print(f"[SDC WARNING] lettura claims fallita ({entity_id}): {e}", file=sys.stderr)
+        return {}
+
+
+def _attach_sdc_claims(
+    opener: urllib.request.OpenerDirector,
+    statements: list,
+    front_filename: str,
+    item_num: int,
+    csrf_token: str,
+    credentials: dict,
+) -> tuple[int, int]:
+    """Attach the item's missing SDC claims to its front file on Commons.
+
+    Returns (added, skipped). Never touches the file page or existing claims.
+    """
+    pageid = _pageid_for_title(opener, front_filename, credentials)
+    if pageid is None:
+        print(f"[SDC] {front_filename}: file non trovato su Commons, claims non aggiunti")
+        return 0, 0
+    entity_id = f"M{pageid}"
+    existing = _existing_mainsnaks(_sdc_claims_now(opener, entity_id, credentials))
+    new_claims, skipped = _missing_claims(statements, existing)
+    for reason in skipped:
+        print(f"[SDC]         - {reason}")
+    if not new_claims:
+        print(f"[SDC] {front_filename}: nessun claim da aggiungere")
+        return 0, len(skipped)
+    body = urllib.parse.urlencode({
+        "action": "wbeditentity",
+        "id": entity_id,
+        "data": json.dumps({"claims": new_claims}),
+        "summary": "Structured data from pd-checker package",
+        "token": csrf_token,
+        "format": "json",
+    }).encode()
+    req = urllib.request.Request(
+        "https://commons.wikimedia.org/w/api.php",
+        data=body,
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    try:
+        with opener.open(req, timeout=60) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+    except (urllib.error.URLError, json.JSONDecodeError, TimeoutError) as e:
+        print(f"[SDC ERRORE] {front_filename}: {e}", file=sys.stderr)
+        return 0, len(skipped)
+    if "error" in result:
+        print(f"[SDC ERRORE] {front_filename}: {result['error'].get('info', '?')}", file=sys.stderr)
+        return 0, len(skipped)
+    print(f"[SDC] {front_filename}: {len(new_claims)} claim aggiunti a {entity_id}")
+    return len(new_claims), len(skipped)
+
+
 def build_retro_wikitext(item: dict, main_filename: str, other_versions: str | None = None, tracking_category: str | None = "Uploaded with pd-checker") -> str:
     """Build wikitext for a retro (back/further side) file.
     
@@ -1009,11 +1199,6 @@ def build_retro_wikitext(item: dict, main_filename: str, other_versions: str | N
         for marker in ["stab.", "tipografia", "arti grafiche", "stamperia", "editore"]
     ):
         author_display = "{{unknown|author}}"
-        # Put imprint in source or description
-        if publisher:
-            source = f"{source} (imprint: {publisher})"
-        elif author_from_info:
-            source = f"{source} (imprint: {author_from_info})"
     else:
         author_display = author_from_info if author_from_info else "{{unknown|author}}"
     

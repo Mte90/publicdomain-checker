@@ -7,7 +7,8 @@ description: Use when determining whether archive material (photographs, postcar
 
 ## AGENT INSTRUCTION — Country of Origin & Language/Place Suggestions
 
-**Determine the material's language and any place evidence (printed place, postmark city, publisher). If the country of origin is not certain, propose the candidate jurisdictions returned by `country_suggest` and mark the item for human review — never assert a country silently.**
+**Determine the material's language and any place evidence (printed place, postmark city, publisher).
+If the country of origin is not certain, propose the candidate jurisdictions returned by `country_suggest` and mark the item for human review — never assert a country silently.**
 
 ### How it works
 
@@ -39,7 +40,8 @@ When `country_of_origin` is missing or empty:
 - München, Berlin → DE
 
 **Publisher heuristics:**
-- A publisher string containing a place name adds that country (e.g., "Stab. Sansaini - Roma" → IT)
+- A publisher string containing a place name adds that country (e.g., "Stab.
+  Sansaini - Roma" → IT)
 
 **Confidence levels:**
 - Language maps to multiple countries → low
@@ -67,30 +69,23 @@ python3 -m pd_checker suggest-country --language en --postmark "Londra 24 X/XI"
 
 ## What this does
 
-For a folder of archive material, decide — per item — whether it is in the
-public domain under the law of its **country of origin**, and render a static
-HTML dashboard for human review.
+For a folder of archive material, decide — per item — whether it is in the public domain under the law of its **country of origin**, and render a static HTML dashboard for human review.
 
 Three jobs, kept separate:
 
-- **Folder context** (asked of the user): provenance, rights-holder, country,
-  period, known authors. The tool must not analyse files cold — context is what
-  turns raw verdicts into *suggestions*.
-- **Fact extraction** (a vision model): reads each image — dates, names, text,
-  classification — with a confidence.
-- **Legal evaluation** (`rules.py`): deterministic,
-  versioned rule tables. Never calls a model, so identical facts yield the
-  identical verdict.
+- **Folder context** (asked of the user): provenance, rights-holder, country, period, known authors.
+  The tool must not analyse files cold — context is what turns raw verdicts into *suggestions*.
+- **Fact extraction** (a vision model): reads each image — dates, names, text, classification — with a confidence.
+- **Legal evaluation** (`rules.py`): deterministic, versioned rule tables.
+  Never calls a model, so identical facts yield the identical verdict.
 
-Never let the model decide the law. The model extracts facts; the engine decides.
+Never let the model decide the law.
+The model extracts facts; the engine decides.
 
 ## Step 0 — Ask for folder context (do this first)
 
-For each material folder, look for `<folder>/context.json`. **If it is absent,
-ask the user** for at least: what the folder is / its provenance, who holds the
-rights (private / company / institution / Holy See), the country of origin, the
-approximate period, and any known authors with their death years. Then write
-`context.json`:
+For each material folder, look for `<folder>/context.json`. **If it is absent, ask the user** for at least: what the folder is / its provenance, who holds the rights (private / company / institution / Holy See), the country of origin, the approximate period, and any known authors with their death years.
+Then write `context.json`:
 
 ```json
 {
@@ -104,12 +99,14 @@ approximate period, and any known authors with their death years. Then write
 }
 ```
 
-Context is advisory: it fills gaps (country, holder, single-year period, author
-death years) and drives the suggestions panel. It never overrides a fact that
-extraction read directly from the image.
+Context is advisory: it fills gaps (country, holder, single-year period, author death years) and drives the suggestions panel.
+It never overrides a fact that extraction read directly from the image.
+The `provenance` value is copied verbatim into `|source=` of every uploaded file: keep it a short archive attribution only (e.g. "Archivio di Daniele Scasciafratte") — never a folder inventory or an item description, which would be out of context on Commons.
+`categories` in the context are only the folder-level FALLBACK: content-based categories declared per item in facts `commons_categories` take precedence (review loop: "Categorie per contenuto").
 
-Also record the models used in `<folder>/run.json`, so the dashboard can cite
-them (provenance):
+`provenance` becomes Commons `|source=` verbatim for every item of the folder: ALWAYS a short archive attribution ("Archivio di Daniele Scasciafratte") — never a folder inventory or a content description, which would be out of context on single items.
+
+Also record the models used in `<folder>/run.json`, so the dashboard can cite them (provenance):
 
 ```json
 {
@@ -123,11 +120,9 @@ them (provenance):
 }
 ```
 
-The dashboard renders this as a "Modelli e riferimenti" panel. Take each
-model from the runtime: the agent's own model is exposed by the runtime, and
-the per-subagent models come from the opencode agent config
-(`oh-my-opencode-slim.json`, preset). The legal verdict itself never uses a
-model.
+The dashboard renders this as a "Modelli e riferimenti" panel.
+Take each model from the runtime: the agent's own model is exposed by the runtime, and the per-subagent models come from the opencode agent config (`oh-my-opencode-slim.json`, preset).
+The legal verdict itself never uses a model.
 
 ## Main entry point
 
@@ -143,7 +138,7 @@ python3 -m pd_checker <subcommand>
 | `status <folder>` | Read `pubdom.json` and print a one-screen summary | No |
 | `validate <folder>` | Check templates and entities in `verdicts.json` (offline) | No |
 | `preflight <folder> [--offline]` | Validate upload package before Commons upload (SHA1, duplicates, completeness) | Yes (default), No with `--offline` |
-| `push <folder> [--live] [--filename-prefix PREFIX]` | Upload ready items to Wikimedia Commons | No (dry-run), Yes with `--live` |
+| `push <folder> [--live] [--filename-prefix PREFIX]` | Upload ready items to Wikimedia Commons; after upload (and for our files already on Commons) it also attaches the package's structured data as SDC claims — missing ones only, idempotent; items without local files are skipped entirely | No (dry-run), Yes with `--live` |
 | `ocr <folder> [--file NAME]... [--apply]` | OCR transcription of the folder's scans via the regolo OCR endpoint (default `deepseek-ocr-2`, env-configured); `--apply` writes `ocr_texts` into facts.json | Yes |
 | `suggest-country [--language CODE] [--text TEXT] [--postmark TEXT] [--publisher TEXT]` | Ranked candidate jurisdictions from language/place/publisher evidence (the deterministic engine applies the same suggestions automatically when the country is undeclared) | No |
 | `verify-live <folder>` | Verify templates live against Commons API | Yes |
@@ -215,15 +210,17 @@ Import them directly instead of shelling out, e.g. `from pd_checker import rules
    ```bash
    python3 -m pd_checker templates-enrich
    ```
-   This fetches real category metadata from Wikimedia Commons for every template in the catalog and populates the `meta` section in `commons_templates.json`.
-   
-   **Note**: The MediaWiki API has strict rate limits. The command uses small batches (~5 templates) with:
+This fetches real category metadata from Wikimedia Commons for every template in the catalog and populates the `meta` section in `commons_templates.json`.
+
+**Note**: The MediaWiki API has strict rate limits.
+The command uses small batches (~5 templates) with:
    - **2-second delay** between successful batches (paces requests to avoid 429s)
    - **Retry-After header** honored on HTTP 429 (falls back to 10s/20s/30s exponential backoff)
    - **Incremental saves** after each batch (partial runs preserve progress)
    - **3 retries** on 429 before failing
-    
-   For large catalogs (1357+ templates), this may take several minutes. If interrupted, re-running will continue from the last saved state.
+
+For large catalogs (1357+ templates), this may take several minutes.
+If interrupted, re-running will continue from the last saved state.
 
 2. **Use `templates-suggest` to find the right template** for your case:
    ```bash
@@ -270,21 +267,30 @@ The preflight performs these checks for each item:
 6. **{{Information}} completeness** — Ensures `description`, `date`, `source`, and `author` are non-empty
 7. **Consistency** — Verifies `upload.flag` is `ready` and unknown fields are empty
 
-**Output**: Per-item `READY` or `BLOCKED` with explicit reasons, plus a summary (N ready, M blocked). Exit code is 1 if any item is blocked.
+**Output**: Per-item `READY` or `BLOCKED` with explicit reasons, plus a summary (N ready, M blocked).
+Exit code is 1 if any item is blocked.
 
-**Important**: The preflight is read-only and does NOT perform the actual upload. The real upload requires a Wikimedia Commons account, a conscious human decision, and credentials via the `push` subcommand (see below).
+**Important**: The preflight is read-only and does NOT perform the actual upload.
+The real upload requires a Wikimedia Commons account, a conscious human decision, and credentials via the `push` subcommand (see below).
 
-The preflight exists so a human can see, before publishing, exactly what would be uploaded and what is missing. It never mutates anything.
+The preflight exists so a human can see, before publishing, exactly what would be uploaded and what is missing.
+It never mutates anything.
 
 ## Naming Commons files
 
-**Every item gets a content-themed Commons filename, authored by the extraction step as `content_title` in facts.json. The name answers “what IS this file” — never “which folder does it come from”. The tool appends the annata (the item's operative reference year) automatically at derivation time.**
+**Every item gets a content-themed Commons filename, authored by the extraction step as `content_title` in facts.json.
+The name answers “what IS this file” — never “which folder does it come from”.
+The tool appends the annata (the item's operative reference year) automatically at derivation time.**
 
-- **Content formula** (when `content_title` is set): `<content_title> <year>.png` and `<content_title> <year> (retro).png`. The `upload_prefix` is NOT glued to a content-titled name.
+- **Content formula** (when `content_title` is set): `<content_title> <year>.png` and `<content_title> <year> (retro).png`.
+  The `upload_prefix` is NOT glued to a content-titled name.
 - **No reference year**: the year part is simply omitted — never an empty gap.
 - **Retro sides**: always get the ` (retro)` suffix and their own minimal page, cross-linked via `other_versions`.
-- **Uniqueness**: `content_title` values MUST be unique within the package — they are the filename stems. `push` refuses an item whose derived name duplicates an earlier item's (`[RIFIUTATO] … content_title deve essere unico nel pacchetto`): fix the title in facts.json, never let two files share a stem.
-- **Writing good titles**: name the specific subject first — document type + issuer/protagonist, or the depicted event (“Tessera di riconoscimento militare Vecchiarelli”, “Invito Quirinale celebrazioni Mazzini”, “Locandina "Ave Maria" - Rieti”). Keep it short (≤ 60 characters); plain letters, digits, spaces, hyphens; Italian; unique per package.
+- **Uniqueness**: `content_title` values MUST be unique within the package — they are the filename stems.
+  `push` refuses an item whose derived name duplicates an earlier item's (`[RIFIUTATO] … content_title deve essere unico nel pacchetto`): fix the title in facts.json, never let two files share a stem.
+- **Writing good titles**: name the specific subject first — document type + issuer/protagonist, or the depicted event (“Tessera di riconoscimento militare Vecchiarelli”, “Invito Quirinale celebrazioni Mazzini”, “Locandina "Ave Maria"
+  - Rieti”).
+    Keep it short (≤ 60 characters); plain letters, digits, spaces, hyphens; Italian; unique per package.
 
 **upload_prefix is the legacy fallback**, used only for items WITHOUT a `content_title`:
 - **Single-item folders**: `<prefix> <year>.png` and `<prefix> <year> (retro).png` (no numeric index).
@@ -304,7 +310,9 @@ When a named entity (author, publisher, etc.) ends QID-less with cache state `no
 "entity_p31": {"Grafiche Baroni - Milano": "Q19652"}
 ```
 
-Then ONE command creates everything ready: `create-entity <folder> --live` creates every entity whose source is present, writes the new QIDs into wd_cache.json and **automatically re-runs the pipeline**, so the statements flip to `ok` in the same execution. Entities without a source stay `[SALTATO]`; unvalidated p31_qids are refused. Suggested block shape (generated):
+Then ONE command creates everything ready: `create-entity <folder> --live` creates every entity whose source is present, writes the new QIDs into wd_cache.json and **automatically re-runs the pipeline**, so the statements flip to `ok` in the same execution.
+Entities without a source stay `[SALTATO]`; unvalidated p31_qids are refused.
+Suggested block shape (generated):
 
 ```json
 {
@@ -356,13 +364,31 @@ python3 -m pd_checker create-entity <folder> --live
 
 ## Review loop (dashboard → agent)
 
-The dashboard is the human's review surface. Every "Cosa fare adesso" action maps to something the agent can execute — when the human raises it, answer with the matching action, never by hand-editing verdicts:
+The dashboard is the human's review surface.
+Every "Cosa fare adesso" action maps to something the agent can execute — when the human raises it, answer with the matching action, never by hand-editing verdicts:
 
-- "Conferma la data" — re-inspect the scan, correct `reference_year` / `year_source` in `pd_data/facts.json`, re-run. Only a year printed on the item (text, postmark) may decide a boundary.
-- "resolve «nome» --live" — run `python3 -m pd_checker resolve "<name>" --live`. A found QID is cached and the next `run` turns the statement `ok`. Not found (exit 1) means the item does not exist on Wikidata: leave the statement QID-less (the name stays in the wikitext) or the human creates the item with a source and re-resolves. Ambiguous (exit 2) means the top Wikidata hits do not coincide with the name: the candidates are printed for the human to confirm — never auto-cache a weak match; cache the human-confirmed QID with `resolve "<name>" --confirm <QID>` (the only sanctioned write after review, fetches labels live).
+- "Conferma la data" — re-inspect the scan, correct `reference_year` / `year_source` in `pd_data/facts.json`, re-run.
+  A year WRITTEN on the item is THE date — printed, postmarked, or handwritten on the document (`year_source`: `visible_text` / `postmark` / `manuscript`): it needs no confirmation and it decides boundaries.
+  Only non-documentary sources (`visual_estimate`, `folder_context`, missing) require the owner's confirmation before the year counts.
+- "resolve «nome» --live" — run `python3 -m pd_checker resolve "<name>" --live`.
+  A found QID is cached and the next `run` turns the statement `ok`.
+  Not found (exit 1) means the item does not exist on Wikidata: leave the statement QID-less (the name stays in the wikitext) or the human creates the item with a source and re-resolves.
+  Ambiguous (exit 2) means the top Wikidata hits do not coincide with the name: the candidates are printed for the human to confirm — never auto-cache a weak match; cache the human-confirmed QID with `resolve "<name>" --confirm <QID>` (the only sanctioned write after review, fetches labels live).
+- "Copertura entità" — after every extraction or dashboard review, diff the transcription's named entities (places, churches, institutions, military units, subjects of the depicted work) against the emitted statements: EVERY named subject must be either depicted (a P180 with a verified QID) or explicitly escalated (resolved `not_found` / `ambiguous`).
+  An entity mentioned in `visible_text` that silently produces no statement is a review defect.
+  Labels on Wikidata rarely match prints letter-by-letter (`S.
+  Domenico`, `94° FANTERIA`, abbreviations): resolve the real item, then add the exact printed form as a cache alias pruned to context (verify the label live before caching; wrong-entity false matches are real — e.g. a church in another city mistaken for the intended subject).
+- "Categorie per contenuto" — after the entity pass, propose Commons categories from the DEPICTED SUBJECT of each item, never from the archive's location: the dedicated regiment category for a military group photo («Category:94º Reggimento fanteria "Messina"»), the city of depicted subject and its painter/church/saint categories for a postcard reproduction, the issuing institution's categories for documents.
+  Method: Commons search in namespace 14 using the subjects' names from the transcription and the resolved entities; prefer DEDICATED subject categories over generic ones («Category:Siena» is fine as support, but a dedicated subject category must lead when it exists).
+  NEVER assign a category without verifying it exists: check every title live, then record it in cat_cache with the check date.
+  Declare the result per item in facts `commons_categories` — the engine uses it INSTEAD of the folder context; context `categories` are only the fallback for items without their own declaration («Postcards of Italy» is still auto-added for Italian postcards).
 - "Dichiara il paese" — add `country_of_origin` to `pd_data/context.json`, re-run.
-- "Il proprietario li dichiara PD" — record the declaration per item in facts (`owner_verdict`, template + basis with date), re-run: the engine applies it as a `public_domain` verdict with full provenance. The review surface keeps showing what the declaration is — and what it is not: a date confirmation remains open, and PD-1996 is not attached without a provable publication year.
-- Non-copyright blockers (Art. 93 correspondence, portrait rights, privacy) — human decision only. Never override, never upload past a blocker under `strict`.
+- "Il proprietario li dichiara PD" — record the declaration per item in facts (`owner_verdict`, template + basis with date), re-run: the engine applies it as a `public_domain` verdict with full provenance.
+  The review surface keeps showing what the declaration is — and what it is not: a date confirmation remains open, and PD-1996 is not attached without a provable publication year.
+- Non-copyright blockers (Art.
+  93 correspondence, portrait rights, privacy) — human decision only.
+  Never override, never upload past a blocker under `strict`.
+  The human CAN decide to proceed: on the owner's explicit consent (as heir, «tutti pronti» / «è tutto ok») re-run with `--upload-policy pd-only` (privacy cleared, low confidence still blocks) or `all` (everything ready, caveats stay in the reasons) — the blockers remain visible on the dashboard either way.
 - "Pronto al caricamento" — propose `push` (dry-run is the default); `--live` only on the owner's explicit go.
 
 Rule: the human decides, the agent executes; the agent never resolves a legal doubt by itself.
@@ -376,12 +402,15 @@ One owner message like «analizza <cartella> e, siccome mi va tutto bene, carica
 3. Walk the review loop: unresolved names → `resolve --live`; missing entities → `entities_to_create` (created only with `source_url`, via `create-entity --live`, which also auto-reruns the package); blockers → owner decides.
 4. `preflight` the package: every BLOCKED reason must be either fixed (context, sources, categories) or explicitly accepted by the owner — the Commons acceptance gate (licence + source + ≥1 category) refuses items under EVERY policy and is never bypassed.
 5. `push <folder>` (dry-run): show the owner the plan — names, wikitext, flags — and the upload policy in force.
-6. Only on the owner's explicit go (their message counts if it clearly says "upload"/«carica»): `push --live` with the prefix from context; report per-file results. Credentials must already be in the environment (PD_WM_*); if missing, stop and point to the README procedure — the agent never asks for secrets in chat and never creates credentials itself.
+6. Only on the owner's explicit go (their message counts if it clearly says "upload"/«carica»): `push --live` with the prefix from context; report per-file results.
+   Credentials must already be in the environment (PD_WM_*); if missing, stop and point to the README procedure — the agent never asks for secrets in chat and never creates credentials itself.
 7. The owner can compress steps 3–6 into one confirmation («carica tutto»): that waives their item-by-item review — set `--upload-policy` accordingly (their responsibility; the reasons stay written on the items) — but the acceptance gate and the credentials rule still stand.
 
 ## Push to Wikimedia Commons
 
-**Upload items with `upload.flag='ready'` to Wikimedia Commons. Each item uploads ALL its images (front + back sides): retro sides get the ` (retro)` suffix, sets number with ` - <n>`, single items carry no index, and the annata (operative reference year) is appended by the shared `derive_filename`. Retro pages are minimal {{Information}} pages linking back to the front.**
+**Upload items with `upload.flag='ready'` to Wikimedia Commons.
+Each item uploads ALL its images (front + back sides): retro sides get the ` (retro)` suffix, sets number with ` - <n>`, single items carry no index, and the annata (operative reference year) is appended by the shared `derive_filename`.
+Retro pages are minimal {{Information}} pages linking back to the front.**
 
 ```bash
 # Dry-run (default): shows what would be uploaded, NO network calls
@@ -390,6 +419,10 @@ python3 -m pd_checker push <folder> [--filename-prefix PREFIX]
 # Live upload: actual upload to Commons (requires credentials)
 python3 -m pd_checker push <folder> --live [--filename-prefix PREFIX]
 ```
+
+After every ready item's upload (and for our files already on Commons), push attaches the package's structured data (SDC) to the corresponding file: missing claims only, never duplicated, never touching existing claims.
+Only (cache-verified QIDs and complete dates qualify; a “circa” qualifier follows the date when the statement carries one.) In dry-run it prints the per-item claim count.
+Items whose local file is absent are skipped entirely — no upload, no SDC.
 
 **Dry-run is the default** — without `--live` it prints the plan per item:
 - Derived Commons filename
@@ -402,15 +435,20 @@ python3 -m pd_checker push <folder> --live [--filename-prefix PREFIX]
 2. **Context `upload_prefix`** key (if set in context.json or pubdom.json context)
 3. **Sanitized folder name** (fallback)
 
-The prefix is sanitized (removes path separators and dangerous characters, keeps spaces). When a default is auto-derived, the command prints which source was used.
+The prefix is sanitized (removes path separators and dangerous characters, keeps spaces).
+When a default is auto-derived, the command prints which source was used.
 
-**Tracking**: every uploaded wikitext carries `[[Category:Uploaded with pd-checker]]` — the hidden tool-tracking category (established Commons practice; MediaWiki creates the category page on first use). Override with `--tracking-category <name>`, disable with `--no-tracking`. `preflight` exempts this category from the unknown-category BLOCKED check because the page is tool-seeded, unlike user categories which must pre-exist in `cat_cache.json`.
+**Tracking**: every uploaded wikitext carries `[[Category:Uploaded with pd-checker]]` — the hidden tool-tracking category (established Commons practice; MediaWiki creates the category page on first use).
+Override with `--tracking-category <name>`, disable with `--no-tracking`.
+`preflight` exempts this category from the unknown-category BLOCKED check because the page is tool-seeded, unlike user categories which must pre-exist in `cat_cache.json`.
 
 **Live upload requires:**
 1. **Explicit `--filename-prefix`** — never upload files with meaningless names
 2. **Credentials via environment variables ONLY** (never argv, never files, never printed):
-   - `PD_WM_OAUTH_TOKEN` — OAuth 2 owner-only bearer token (preferred). Registered at https://meta.wikimedia.org/wiki/Special:OAuthConsumerRegistration/propose/oauth2 (check "This consumer is for use only by <user>"; the access token is shown on the confirmation page — Wikimedia OAuth is centralised on meta, NOT Commons)
-   - `PD_WM_BOT_USER` + `PD_WM_BOT_PASSWORD` — bot-password login flow. Created at https://commons.wikimedia.org/wiki/Special:BotPasswords (choose the upload/edit grants; the login name becomes `<account>@<suffix>`)
+   - `PD_WM_OAUTH_TOKEN` — OAuth 2 owner-only bearer token (preferred).
+     Registered at https://meta.wikimedia.org/wiki/Special:OAuthConsumerRegistration/propose/oauth2 (check "This consumer is for use only by <user>"; the access token is shown on the confirmation page — Wikimedia OAuth is centralised on meta, NOT Commons)
+   - `PD_WM_BOT_USER` + `PD_WM_BOT_PASSWORD` — bot-password login flow.
+     Created at https://commons.wikimedia.org/wiki/Special:BotPasswords (choose the upload/edit grants; the login name becomes `<account>@<suffix>`)
    - `PD_WM_CONTACT` — contact info for User-Agent (required by Wikimedia API etiquette)
 
 **Upload behavior:**
@@ -480,9 +518,8 @@ python3 -m pd_checker push Cardinale-Del-Val --live --filename-prefix "Merry del
 
 ## OCR transcription (regolo deepseek-ocr-2)
 
-Extraction transcribes what the vision model reads; when text is dense, tiny or
-partly illegible, the OCR model completes it. The `ocr` subcommand calls an
-OpenAI-compatible chat endpoint with the image inline:
+Extraction transcribes what the vision model reads; when text is dense, tiny or partly illegible, the OCR model completes it.
+The `ocr` subcommand calls an OpenAI-compatible chat endpoint with the image inline:
 
 ```bash
 # Transcribe every scan claimed by facts.json (prints each transcription)
@@ -501,29 +538,25 @@ Configuration is environment-only (same policy as the Wikimedia credentials):
 - `PD_OCR_BASE_URL` — default `https://api.regolo.ai/v1`
 - `PD_OCR_MODEL` — default `deepseek-ocr-2`
 
-With `--apply`, each side's transcription lands in the owning item's
-`ocr_texts` map (keyed by image basename; re-runs overwrite per file,
-idempotent). Record the model in the run manifest for the dashboard's
-"Modelli e riferimenti" panel: if `run.json` was already filed into
-`pd_data/`, write it back at the folder root first — the pipeline re-reads
-that copy and files it again:
+With `--apply`, each side's transcription lands in the owning item's `ocr_texts` map (keyed by image basename; re-runs overwrite per file, idempotent).
+Record the model in the run manifest for the dashboard's "Modelli e riferimenti" panel: if `run.json` was already filed into `pd_data/`, write it back at the folder root first — the pipeline re-reads that copy and files it again:
 
 ```json
 {"role": "Trascrizione OCR", "provider": "regolo", "model": "deepseek-ocr-2"}
 ```
 
-OCR transcriptions are REVIEW EVIDENCE, never legal facts: a year that only
-OCR surfaces is promoted by the human (`reference_year` + `date_evidence`),
-not by the engine. The Commons description prefers the front side's OCR
-transcription (full text); the dashboard shows every side's OCR plus the
-vision transcription, both complete.
+OCR transcriptions are REVIEW EVIDENCE, never legal facts: a year that only OCR surfaces is promoted by the human (`reference_year` + `date_evidence`), not by the engine.
+The Commons description prefers the front side's OCR transcription (full text); the dashboard shows every side's OCR plus the vision transcription, both complete.
 
 ## Facts schema (input)
 
 - `file` (str), `document_type` (`photo|postcard|letter|newspaper|magazine|manuscript|unknown`)
 - `content_title` (str|null): content-themed Commons filename stem authored by the extraction step — answers “what IS this file” (see “Naming Commons files”); unique within the package; edited in review like `reference_year`
 - `ocr_texts` (object|null): per-side OCR transcriptions written by `ocr --apply`, keyed by image basename; review evidence, never a source of legal facts
-- `owner_verdict` (object|null): the archive owner's explicit public-domain declaration — `{"template": "{{PD-Italy}}", "basis": "dichiarazione del proprietario (YYYY-MM-DD): …"}`. The engine applies it as the decision: status `public_domain`, the chosen template, provenance written in reason and notes; the term is NOT computed, the «tipo di documento» missing-data entry is cleared; non-copyright blockers (Artt. 93/96-97) stay. The human's word is the datum — the agent only records it, never drafts one itself.
+- `owner_verdict` (object|null): the archive owner's explicit public-domain declaration — `{"template": "{{PD-Italy}}", "basis": "dichiarazione del proprietario (YYYY-MM-DD): …"}`.
+  The engine applies it as the decision: status `public_domain`, the chosen template, provenance written in reason and notes; the term is NOT computed, the «tipo di documento» missing-data entry is cleared; non-copyright blockers (Artt.
+  93/96-97) stay.
+  The human's word is the datum — the agent only records it, never drafts one itself.
 - `country_of_origin` (`IT|GB|VA`, default `IT`)
 - `author` (str|null), `author_nationality` (str|null), `author_death_year` (int|null)
 - `author_role` (`photographer|illustrator|printer|publisher`|null): role of the person/firm named in `author`; absent means unknown
@@ -533,20 +566,17 @@ vision transcription, both complete.
 - `translation_lang` (str), `has_identifiable_people` (bool|null), `vlm_confidence` (`high|medium|low`)
 - `date_evidence` (str|null): the exact snippet the year came from
 - `postmark` (object|null): `{"city": str|null, "date_text": str|null, "year": int|null}` — a postal cancellation is strong dating evidence; capture it even when the year is illegible (city + day/month narrow the estimate)
-- `publisher` (str|null): publisher imprint found in the document (e.g., "Stab. Sansaini - Roma"); used for country suggestion and anonymous contradiction detection
+- `publisher` (str|null): publisher imprint found in the document (e.g., "Stab.
+  Sansaini - Roma"); used for country suggestion and anonymous contradiction detection
 - `is_vatican_asset` (bool|null): true when the item is a Vatican asset (distinct from rights_holder == "holy_see")
 - `set_id` (physical object: groups front/back), `part` (`front|back|single`), `series_id` (related items), `images` (all files for the item: front + back)
-- `has_handwriting` (bool|null): true when the item has handwritten text (address, message, signature of the sender); used for Art. 93 correspondence-consent trigger. Set true for any handwritten content on the item.
+- `has_handwriting` (bool|null): true when the item has handwritten text (address, message, signature of the sender); used for Art.
+  93 correspondence-consent trigger.
+  Set true for any handwritten content on the item.
 
 ## Verdict schema (output)
 
-`status` (`public_domain|not_public_domain|uncertain`), `confidence`, `reason`,
-`legal_basis`, `commons_templates`, `commons_templates_candidate` (nature-tailored
-licence suggestions for the human — present only on uncertain verdicts, never
-applied), `commons_categories`, `missing_data`,
-`pd_year`, `years_until_pd`, `human_review_required`, `blockers_non_copyright`,
-`notes`, `rule_table_version`, `country_of_origin`, `shorter_term_applied`,
-`jurisdictions` (`{origin: {...}, italy: {...}}`), `extracted_facts`.
+`status` (`public_domain|not_public_domain|uncertain`), `confidence`, `reason`, `legal_basis`, `commons_templates`, `commons_templates_candidate` (nature-tailored licence suggestions for the human — present only on uncertain verdicts, never applied), `commons_categories`, `missing_data`, `pd_year`, `years_until_pd`, `human_review_required`, `blockers_non_copyright`, `notes`, `rule_table_version`, `country_of_origin`, `shorter_term_applied`, `jurisdictions` (`{origin: {...}, italy: {...}}`), `extracted_facts`.
 
 ## Wikidata statement shape
 
@@ -563,9 +593,7 @@ Each statement in `wikidata.statements` has:
 
 ### Provenance rule: cache-first QID resolution
 
-**Every emitted QID must be traceable to a verified cache entry.** The metadata step
-may ONLY emit a QID that exists in `wd_cache.json` — otherwise it emits no QID and
-marks the statement `da_rivedere`.
+**Every emitted QID must be traceable to a verified cache entry.** The metadata step may ONLY emit a QID that exists in `wd_cache.json` — otherwise it emits no QID and marks the statement `da_rivedere`.
 
 **Commands:**
 
@@ -603,20 +631,32 @@ python3 -m pd_checker resolve "Grafiche Baroni - Milano" --live
 - `resolve(name, live=True)` → cache-first; if absent calls Wikidata API `wbsearchentities` with proper User-Agent, stores result, returns QID or None
 - **Ambiguous → `--confirm`**: after the human reviews the printed candidates, `resolve "<name>" --confirm <QID>` is the ONLY sanctioned cache write — it fetches it/en labels live and refuses invalid or nonexistent QIDs
 
-**P180 "raffigura" mining**: on every `run`, cached names appearing in an item's `visible_text` automatically become P180 depicts statements (the theatre, the issuer, the composers…). Ordinary words are stoplisted (`circa`). This is what makes the verification pass pay off: curate the people and places named in the transcriptions, `resolve "<name>" --live` each (pace the calls — Wikidata rate-limits), report found/absent with labels AND descriptions to the human (a bare-surname item described «cognome / family name» is NOT the person), `--confirm` the human-approved QIDs, then `run` — the statements flip to `ok`.
+**P180 "raffigura" mining**: on every `run`, cached names appearing in an item's `visible_text` automatically become P180 depicts statements (the theatre, the issuer, the composers…).
+Ordinary words are stoplisted (`circa`).
+This is what makes the verification pass pay off: curate the people and places named in the transcriptions, `resolve "<name>" --live` each (pace the calls — Wikidata rate-limits), report found/absent with labels AND descriptions to the human (a bare-surname item described «cognome / family name» is NOT the person), `--confirm` the human-approved QIDs, then `run` — the statements flip to `ok`.
 - **Never hand-write a QID** without a cache entry — the guard in `wikidata.py` drops any qid that is not in the cache and marks that statement `da_rivedere`.
 
 ### Extraction contract: `author_role`
 
-The `author_role` field tells the tool how to interpret the `author` value. The extracting agent must look at what the scans actually show:
+The `author_role` field tells the tool how to interpret the `author` value.
+The extracting agent must look at what the scans actually show:
 
-- **`photographer`**: the signature/name appears **inside the artwork** (e.g., "A. Vasari fot.", a photographer's mark on the image itself). Emit P170 (creator).
-- **`illustrator`**: the name appears as an **illustrator credit** separate from the photographic creation (e.g., "dis. X" on a printed card). Emit neither P170 nor P123; mark the item for review.
-- **`printer`**: the name appears as a **printing works imprint** (e.g., "Stab. X", "Tipografia Y", "Arti Grafiche Z"). Emit P123 (publisher) instead of P170; mark for review.
-- **`publisher`**: the name appears as a **publisher's masthead** (e.g., "Edizioni X", publisher logo). Emit P123 (publisher) instead of P170; mark for review.
-- **absent/null**: the role is unknown — use the current marker-based detection (look for "Stab.", "Tipografia", etc. in the author string). Backward compatible: no regression when the field is missing.
+- **`photographer`**: the signature/name appears **inside the artwork** (e.g., "A.
+  Vasari fot.", a photographer's mark on the image itself).
+  Emit P170 (creator).
+- **`illustrator`**: the name appears as an **illustrator credit** separate from the photographic creation (e.g., "dis.
+  X" on a printed card).
+  Emit neither P170 nor P123; mark the item for review.
+- **`printer`**: the name appears as a **printing works imprint** (e.g., "Stab.
+  X", "Tipografia Y", "Arti Grafiche Z").
+  Emit P123 (publisher) instead of P170; mark for review.
+- **`publisher`**: the name appears as a **publisher's masthead** (e.g., "Edizioni X", publisher logo).
+  Emit P123 (publisher) instead of P170; mark for review.
+- **absent/null**: the role is unknown — use the current marker-based detection (look for "Stab.", "Tipografia", etc. in the author string).
+  Backward compatible: no regression when the field is missing.
 
-**Do NOT guess a role** when the visual evidence is ambiguous. Absent = current behaviour, unchanged.
+**Do NOT guess a role** when the visual evidence is ambiguous.
+Absent = current behaviour, unchanged.
 
 ### Example: P571 with circa qualifier (estimate)
 
@@ -645,15 +685,13 @@ When `year_source` is `visual_estimate`, `folder_context`, or the source is miss
 - adds a qualifier P1480 = Q5727902 (circa)
 - includes `time` and `precision` fields
 
-A folder-context year is not a confirmed date: it is backfilled from the folder
-period (a range uses its latest bound), so the claim sent to Wikidata carries the
-same uncertainty as an estimate.
+A folder-context year is not a confirmed date: it is backfilled from the folder period (a range uses its latest bound), so the claim sent to Wikidata carries the same uncertainty as an estimate.
 
 Confirmed dates (source is `visible_text` or `postmark`) have no qualifiers and `status: ok`.
 
-Overall `status` is `public_domain` only when the work is PD in its country of
-origin **and** in Italy. Foreign works are capped by the Italian rule of the
-shorter term (Art. 188): they are protected in Italy no longer than at origin.
+Overall `status` is `public_domain` only when the work is PD in its country of origin **and** in Italy.
+Foreign works are capped by the Italian rule of the shorter term (Art.
+188): they are protected in Italy no longer than at origin.
 
 ## Jurisdictions and terms (rule table `multi@2026-02`)
 
@@ -661,17 +699,11 @@ shorter term (Art. 188): they are protected in Italy no longer than at origin.
 
 ### Licence templates
 
-When a verdict is UNCERTAIN, no licence tag is emitted; the dashboard instead
-shows `commons_templates_candidate` — per-document-nature suggestions with
-the missing datum named (e.g. `{{PD-Italy}}` for a simple photo awaiting its
-production year). Anonymous Italian printed works show BOTH `{{PD-Italy}}`
-and `{{PD-anon-70-EU}}` as alternatives — two framings of the same 70-year
-anonymous-term conclusion; the human picks at review. Official documents of
-public bodies (military command, municipality, state: permit, letter,
-invitation) suggest the `{{PD-Italy-EdictGov}}` / `{{PD-ItalyGov}}` pair —
-Art. 5 L.633/1941 excludes official texts from copyright, but the "official
-act" nature stays a human confirmation. A candidate is never applied by the
-tool.
+When a verdict is UNCERTAIN, no licence tag is emitted; the dashboard instead shows `commons_templates_candidate` — per-document-nature suggestions with the missing datum named (e.g. `{{PD-Italy}}` for a simple photo awaiting its production year).
+Anonymous Italian printed works show BOTH `{{PD-Italy}}` and `{{PD-anon-70-EU}}` as alternatives — two framings of the same 70-year anonymous-term conclusion; the human picks at review.
+Official documents of public bodies (military command, municipality, state: permit, letter, invitation) suggest the `{{PD-Italy-EdictGov}}` / `{{PD-ItalyGov}}` pair — Art.
+5 L.633/1941 excludes official texts from copyright, but the "official act" nature stays a human confirmation.
+A candidate is never applied by the tool.
 
 | Case | Templates | Reason |
 |------|-----------|--------|
@@ -681,9 +713,7 @@ tool.
 | Anonymous artistic/pseudonymous work, PD | `{{PD-anon-70-EU}}` | EU anonymous works; `{{PD-1996}}` per the per-class URAA condition below |
 | Not in PD / uncertain | `[]` | No templates |
 
-**URAA condition for {{PD-1996}} (per-class, live rule)**: the template
-attaches only when the work was ALREADY in the public domain in its source
-country on 1996-01-01 — judged with the term in force then, per class:
+**URAA condition for {{PD-1996}} (per-class, live rule)**: the template attaches only when the work was ALREADY in the public domain in its source country on 1996-01-01 — judged with the term in force then, per class:
 
 | Class | Term in force on 1996-01-01 | {{PD-1996}} eligible when |
 |-------|------------------------------|---------------------------|
@@ -695,20 +725,20 @@ country on 1996-01-01 — judged with the term in force then, per class:
 
 When the work is NOT eligible:
 - `{{PD-1996}}` is NOT attached
-- The verdict includes `us_status: {"restored_until": <publication year> + 96, "basis": "URAA"}` —
-  the US term runs 95 years from publication, so the work enters the US public
-  domain on January 1 of (publication + 96); a work already home-PD at the URAA
-  date never gets a restoration
+- The verdict includes `us_status: {"restored_until": <publication year> + 96, "basis": "URAA"}` — the US term runs 95 years from publication, so the work enters the US public domain on January 1 of (publication + 96); a work already home-PD at the URAA date never gets a restoration
 - The upload flag is blocked with an Italian note explaining the US restoration
 - The copyright verdict itself remains correct (PD in country of origin is still TRUE)
 
-**Note**: `{{PD-Italy-photo}}` does NOT exist (404). Use `{{PD-Italy}}` for Italian simple photographs.
+**Note**: `{{PD-Italy-photo}}` does NOT exist (404).
+Use `{{PD-Italy}}` for Italian simple photographs.
 
 ### Source template
 
-`{{Self-scanned}}` — REQUIRED for every self-made scan. This template indicates that the uploader created the digital reproduction themselves.
+`{{Self-scanned}}` — REQUIRED for every self-made scan.
+This template indicates that the uploader created the digital reproduction themselves.
 
-**Important**: `{{Self-scanned}}` is used when the uploader scanned a work they did not create. It is NOT used when:
+**Important**: `{{Self-scanned}}` is used when the uploader scanned a work they did not create.
+It is NOT used when:
 - The work was downloaded from elsewhere (use `{{Own scan}}` only for truly self-made scans)
 - The scan was made by someone else
 
@@ -730,9 +760,11 @@ Every Commons upload requires an `{{Information}}` template with these fields:
 
 ### Why {{PD-Art}} and {{PD-scan}} are NOT used
 
-**{{PD-Art}}** is "only for use when the initial reproduction was by means of a photograph, rather than a scan". For a self-made scan of a flat 2D public-domain work, this template is inappropriate.
+**{{PD-Art}}** is "only for use when the initial reproduction was by means of a photograph, rather than a scan".
+For a self-made scan of a flat 2D public-domain work, this template is inappropriate.
 
-**{{PD-scan}}** "must not be used when you yourself personally made the scan". This template is for scans made by others, not for self-made scans.
+**{{PD-scan}}** "must not be used when you yourself personally made the scan".
+This template is for scans made by others, not for self-made scans.
 
 **Correct approach**: A self-made scan of a flat 2D public-domain work needs only:
 1. The source-country PD tag (e.g., `{{PD-Italy}}`, `{{PD-1996}}`)
@@ -742,10 +774,15 @@ Every Commons upload requires an `{{Information}}` template with these fields:
 ### {{PD-Italy}} simple-vs-artistic caveat
 
 Italy has two different terms for photographs:
-- **Simple photographs** (`foto semplice`): 70 years from production (Art. 92, L. 182/2025)
-- **Artistic photographs** (`foto d'arte`): life + 70 years (Artt. 2+25)
+- **Simple photographs** (`foto semplice`): 70 years from production (Art.
+  92, L.
+  182/2025)
+- **Artistic photographs** (`foto d'arte`): life + 70 years (Artt.
+  2+25)
 
-The engine distinguishes these via `photo_classification` (`simple|artistic|unclear`). For simple photos, `{{PD-Italy}}` is correct. For artistic photos, use `{{PD-old-70}}` instead.
+The engine distinguishes these via `photo_classification` (`simple|artistic|unclear`).
+For simple photos, `{{PD-Italy}}` is correct.
+For artistic photos, use `{{PD-old-70}}` instead.
 
 ## Template catalog validation
 
@@ -766,26 +803,29 @@ python3 -m pd_checker update
 ```
 Downloads the latest template list from Commons and rewrites `commons_templates.json`.
 
-**Check verdicts for unknown templates** (offline):  
-Runs automatically during `python3 -m pd_checker run <folder>` or explicitly via:
+**Check verdicts for unknown templates** (offline): Runs automatically during `python3 -m pd_checker run <folder>` or explicitly via:
 ```bash
 python3 -m pd_checker validate <folder>
 ```
-Prints one line per unknown template with the file that carries it. Exit 1 if any unknown, 0 if clean.
+Prints one line per unknown template with the file that carries it.
+Exit 1 if any unknown, 0 if clean.
 
 ### Live API verification
 
-Queries the MediaWiki API directly (`action=query&titles=Template:X&redirects=1`) to verify each template exists on Commons. This is the authoritative check: it handles redirects and detects missing templates even if they were in the snapshot.
+Queries the MediaWiki API directly (`action=query&titles=Template:X&redirects=1`) to verify each template exists on Commons.
+This is the authoritative check: it handles redirects and detects missing templates even if they were in the snapshot.
 
 **Verify templates live**:
 ```bash
 python3 -m pd_checker verify-live <folder>
 ```
-Prints one line per template: `Name -> exists` / `Name -> missing` / `Name -> redirect to Y`. Exit 1 if any template is missing, 0 otherwise.
+Prints one line per template: `Name -> exists` / `Name -> missing` / `Name -> redirect to Y`.
+Exit 1 if any template is missing, 0 otherwise.
 
 ### Test coverage
 
-Run `python3 -m pytest pd_checker/tests/test_templates.py -q` to validate that EVERY template the engine emits is present in the catalog. This test fails if someone reintroduces a phantom template.
+Run `python3 -m pytest pd_checker/tests/test_templates.py -q` to validate that EVERY template the engine emits is present in the catalog.
+This test fails if someone reintroduces a phantom template.
 
 | Country | Case | Term | Counted from |
 |---------|------|------|--------------|
@@ -800,33 +840,27 @@ Run `python3 -m pytest pd_checker/tests/test_templates.py -q` to validate that E
 | VA | Vatican-asset / Holy See work | 70 years (L. CXCVII/2017 Artt. 4-5) | fixation / first publication |
 | VA | Anything else | Italian law applies suppletively (Art. 1) | — |
 
-**Corporate ownership does not by itself change the term.** In both Italy and
-the UK the term follows the natural author's life (life + 70) even when a
-company holds the rights. It moves to "from publication" only when the *work*
-is anonymous (Art. 27), a collective work (Art. 26), or a public body's (Art. 29).
+**Corporate ownership does not by itself change the term.** In both Italy and the UK the term follows the natural author's life (life + 70) even when a company holds the rights.
+It moves to "from publication" only when the *work* is anonymous (Art.
+27), a collective work (Art.
+26), or a public body's (Art.
+29).
 
 ## Hard rules
 
-- **Public domain ≠ publishable.** Always surface the non-copyright blockers:
-  portrait / personality rights (Artt. 96-97), correspondence consent
-  (Art. 93), privacy. A corporate holder can never waive the author's moral
-  rights (Art. 20).
-- **Only a year read from the item itself may decide a boundary.** Printed
-  text and postmark years decide; visual estimates and folder-context
-  backfills are inferences — when the resulting expiry falls within the
-  estimate margin (±10 years) of the current year, the verdict MUST be
-  `uncertain`. A period range backfills with its latest bound.
-- **The margin weighs the operative term.** The ±10-year guard evaluates the
-  expiry of the term the branch actually applies, not a discarded one: for
-  Italian simple photographs produced ≤2004 that is the 20-year no-revival
-  term (production + 20); for ≥2005 it is the 70-year term. At current dates
-  only the 20-year side can land inside the window (production 1996–2004).
-- **No evidence, no verdict.** An item with no textual evidence and a
-  low-confidence extraction must not receive a `public_domain` verdict:
-  the classification and the year would both be guesses.
+- **Public domain ≠ publishable.** Always surface the non-copyright blockers: portrait / personality rights (Artt.
+  96-97), correspondence consent (Art.
+  93), privacy.
+  A corporate holder can never waive the author's moral rights (Art.
+  20).
+- **Only a year read from the item itself may decide a boundary.** Printed text and postmark years decide; visual estimates and folder-context backfills are inferences — when the resulting expiry falls within the estimate margin (±10 years) of the current year, the verdict MUST be `uncertain`.
+  A period range backfills with its latest bound.
+- **The margin weighs the operative term.** The ±10-year guard evaluates the expiry of the term the branch actually applies, not a discarded one: for Italian simple photographs produced ≤2004 that is the 20-year no-revival term (production + 20); for ≥2005 it is the 70-year term.
+  At current dates only the 20-year side can land inside the window (production 1996–2004).
+- **No evidence, no verdict.** An item with no textual evidence and a low-confidence extraction must not receive a `public_domain` verdict: the classification and the year would both be guesses.
 - The dashboard is triage + evidence, never a green light.
-- Version the rule table. If a law changes, bump `RULE_TABLE_VERSION` and the
-  affected jurisdiction table.
+- Version the rule table.
+  If a law changes, bump `RULE_TABLE_VERSION` and the affected jurisdiction table.
 
 ## Upload policies
 
@@ -851,18 +885,19 @@ When using `all` policy:
 
 ### Commons acceptance is a per-file fact, not a policy choice
 
-Under every policy, push refuses items that fail the Commons checklist — Commons acceptance is a per-file fact, not a policy choice. The checklist has three requirements:
+Under every policy, push refuses items that fail the Commons checklist — Commons acceptance is a per-file fact, not a policy choice.
+The checklist has three requirements:
 
 1. **Licence tag present** — an item whose page would carry no licence tag is refused with `[RIFIUTATO] <file>: nessun tag di licenza — Commons avvierà la cancellazione`
 2. **Source declared** — an item with `information.source` empty or in {"", "non specificato", "da confermare", "n/d"} is refused with `[RIFIUTATO] <file>: fonte non dichiarata — Commons segnala i file senza fonte`
 3. **At least one category** — an item with no `commons_categories` is refused with `[RIFIUTATO] <file>: nessuna categoria — Commons segnala i file non categorizzati`
 
-Refused items are never planned in dry-run and never uploaded in live. If all items are refused, the command exits with code 1. This design ensures that the bot cannot cause Commons deletions for any user.
+Refused items are never planned in dry-run and never uploaded in live.
+If all items are refused, the command exits with code 1.
+This design ensures that the bot cannot cause Commons deletions for any user.
 
 This design ensures that when a user overrides the tool's caution, the audit trail remains honest about what the tool actually knows vs. what the human decided to do anyway.
 
 ## Verification
 
-`python3 -m pytest pd_checker/tests -q` — the rule tables, the evidence
-guards, the upload policies, the catalogue guards and the dashboard
-structure are covered by tests.
+`python3 -m pytest pd_checker/tests -q` — the rule tables, the evidence guards, the upload policies, the catalogue guards and the dashboard structure are covered by tests.

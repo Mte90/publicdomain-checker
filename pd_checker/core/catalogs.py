@@ -832,14 +832,25 @@ def update_entity_catalog(ids: list[str]) -> bool:
         print("ERROR: No entities fetched from API", file=sys.stderr)
         return False
     
-    # Build catalog structure
-    catalog_data = {
-        "note": "Wikidata property and item catalog for pd_checker validation. Fetched via wbgetentities API.",
-        "source": "https://www.wikidata.org/w/api.php",
-        "fetched": __import__("datetime").datetime.now().strftime("%Y-%m-%d"),
-        "properties": all_properties,
-        "items": all_items
-    }
+    # Merge into the EXISTING catalog: never wipe entities the caller did not
+    # ask about — update_entity_catalog once REPLACED the whole catalog
+    # (properties included) and destroyed validation data (fixed 2026-11-27).
+    try:
+        with open(ENTITY_CATALOG_PATH, "r", encoding="utf-8") as f:
+            catalog_data = json.load(f)
+        if not isinstance(catalog_data, dict):
+            catalog_data = {}
+    except (FileNotFoundError, json.JSONDecodeError):
+        catalog_data = {}
+    catalog_data.setdefault(
+        "note", "Wikidata property and item catalog for pd_checker validation. Fetched via wbgetentities API."
+    )
+    catalog_data["source"] = "https://www.wikidata.org/w/api.php"
+    catalog_data["fetched"] = __import__("datetime").datetime.now().strftime("%Y-%m-%d")
+    properties = catalog_data.setdefault("properties", {})
+    items = catalog_data.setdefault("items", {})
+    properties.update(all_properties)
+    items.update(all_items)
     
     # Write to file
     try:
