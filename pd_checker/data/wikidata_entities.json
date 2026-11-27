@@ -219,6 +219,58 @@
     "Q3329487": {
       "label_it": "Museo archeologico nazionale di Paestum",
       "label_en": "National Archaeological Museum of Paestum"
+    },
+    "Q220": {
+      "label_it": "Roma",
+      "label_en": "Rome"
+    },
+    "Q1202365": {
+      "label_it": "piazza della Repubblica",
+      "label_en": "Piazza della Repubblica"
+    },
+    "Q12512": {
+      "label_it": "Basilica di San Pietro",
+      "label_en": "St. Peter's Basilica"
+    },
+    "Q213678": {
+      "label_it": "Biblioteca Apostolica Vaticana",
+      "label_en": "Vatican Library"
+    },
+    "Q938622": {
+      "label_it": "Pontificia Accademia delle Scienze",
+      "label_en": "Pontifical Academy of Sciences"
+    },
+    "Q27994826": {
+      "label_it": "fontana delle Naiadi",
+      "label_en": "Fontana delle Naiadi"
+    },
+    "Q99910974": {
+      "label_it": "Pincio",
+      "label_en": "Pincio"
+    },
+    "Q34921": {
+      "label_it": "Piazza del Campidoglio",
+      "label_en": "Piazza del Campidoglio"
+    },
+    "Q1312988": {
+      "label_it": "chiesa di San Giuseppe dei Falegnami",
+      "label_en": "San Giuseppe dei Falegnami"
+    },
+    "Q486382": {
+      "label_it": "Castel Sant'Angelo",
+      "label_en": "Castel Sant'Angelo"
+    },
+    "Q870476": {
+      "label_it": "Ponte Sant’Angelo",
+      "label_en": "Ponte Sant'Angelo"
+    },
+    "Q1382978": {
+      "label_it": "Marcello Piacentini",
+      "label_en": "Marcello Piacentini"
+    },
+    "Q16525155": {
+      "label_it": "Alessandro Limongelli",
+      "label_en": "Alessandro Limongelli"
     }
   }
 }

@@ -1039,24 +1039,16 @@ def _generate_html(verdicts: list[dict], images_base: str | None, ctx: any, run_
         font-size: 0.7rem;
       }}
     }}
-    #filter-status-all:not(:checked) ~ .main-content .card {{ display: none; }}
-    #filter-status-public_domain:checked ~ .main-content .card.filter-status-public_domain {{ display: block; }}
-    #filter-status-not_public_domain:checked ~ .main-content .card.filter-status-not_public_domain {{ display: block; }}
-    #filter-status-uncertain:checked ~ .main-content .card.filter-status-uncertain {{ display: block; }}
-    #filter-upload-all:not(:checked) ~ .main-content .card {{ display: none; }}
-    #filter-upload-ready:checked ~ .main-content .card.filter-upload-ready {{ display: block; }}
-    #filter-upload-review:checked ~ .main-content .card.filter-upload-review {{ display: block; }}
-    #filter-upload-no:checked ~ .main-content .card.filter-upload-no {{ display: block; }}
-    #filter-status-all:not(:checked) ~ .main-content #filter-upload-all:not(:checked) ~ .card {{ display: none; }}
-    #filter-status-public_domain:checked ~ .main-content #filter-upload-ready:checked ~ .card.filter-status-public_domain.filter-upload-ready {{ display: block; }}
-    #filter-status-public_domain:checked ~ .main-content #filter-upload-review:checked ~ .card.filter-status-public_domain.filter-upload-review {{ display: block; }}
-    #filter-status-public_domain:checked ~ .main-content #filter-upload-no:checked ~ .card.filter-status-public_domain.filter-upload-no {{ display: block; }}
-    #filter-status-not_public_domain:checked ~ .main-content #filter-upload-ready:checked ~ .card.filter-status-not_public_domain.filter-upload-ready {{ display: block; }}
-    #filter-status-not_public_domain:checked ~ .main-content #filter-upload-review:checked ~ .card.filter-status-not_public_domain.filter-upload-review {{ display: block; }}
-    #filter-status-not_public_domain:checked ~ .main-content #filter-upload-no:checked ~ .card.filter-status-not_public_domain.filter-upload-no {{ display: block; }}
-    #filter-status-uncertain:checked ~ .main-content #filter-upload-ready:checked ~ .card.filter-status-uncertain.filter-upload-ready {{ display: block; }}
-    #filter-status-uncertain:checked ~ .main-content #filter-upload-review:checked ~ .card.filter-status-uncertain.filter-upload-review {{ display: block; }}
-    #filter-status-uncertain:checked ~ .main-content #filter-upload-no:checked ~ .card.filter-status-uncertain.filter-upload-no {{ display: block; }}
+    /* Cards live INSIDE .main-content with the filter inputs (inside .filter-panel),
+       so sibling (~) selectors never matched and the filters did nothing.
+       Each active filter now EXCLUDES non-matching cards; intersection follows
+       naturally because a visible card must satisfy every active filter. */
+    .main-content:has(#filter-status-public_domain:checked) .card:not(.filter-status-public_domain) {{ display: none; }}
+    .main-content:has(#filter-status-not_public_domain:checked) .card:not(.filter-status-not_public_domain) {{ display: none; }}
+    .main-content:has(#filter-status-uncertain:checked) .card:not(.filter-status-uncertain) {{ display: none; }}
+    .main-content:has(#filter-upload-ready:checked) .card:not(.filter-upload-ready) {{ display: none; }}
+    .main-content:has(#filter-upload-review:checked) .card:not(.filter-upload-review) {{ display: none; }}
+    .main-content:has(#filter-upload-no:checked) .card:not(.filter-upload-no) {{ display: none; }}
   '''
     
     # Sorters

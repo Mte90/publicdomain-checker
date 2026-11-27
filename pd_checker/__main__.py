@@ -481,10 +481,11 @@ def cmd_run(argv: list[str]) -> int:
     corr.write_text(json.dumps(corr_data, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"[4/6] correlate -> {corr}")
 
-    # [5/6] report
-    report.main([str(verdicts), "-o", str(ROOT / "dashboard.html"), "--images-base", args.images_base, "--context", str(folder), "--upload-policy", args.upload_policy])
+    # [5/6] report — folder dashboard only: the owner keeps no dashboard in
+    # the project root (owner directive 2026-11-27), and .gitignore ignores
+    # dashboard.html anyway
     report.main([str(verdicts), "-o", str(folder / "dashboard.html"), "--images-base", "..", "--context", str(folder), "--upload-policy", args.upload_policy])
-    print(f"[5/6] report    -> {ROOT / 'dashboard.html'}  and  {folder / 'dashboard.html'}")
+    print(f"[5/6] report    -> {folder / 'dashboard.html'}")
 
     data = json.loads(verdicts.read_text(encoding="utf-8"))
     print(f"\n== Verdicts ({len(data['items'])} items, {data['rule_table_version']}, {data['current_year']}) ==")

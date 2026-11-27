@@ -583,6 +583,111 @@
       "label_en": "Temple of Athena",
       "result": "ok",
       "checked": "2026-11-27"
+    },
+    "Piazza della Repubblica (Roma)": {
+      "qid": "Q1202365",
+      "label_it": "piazza della Repubblica",
+      "label_en": "Piazza della Repubblica",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Fontana delle Naiadi": {
+      "qid": "Q27994826",
+      "label_it": "Fontana delle Naiadi",
+      "label_en": "Fontana delle Naiadi",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Pincio": {
+      "qid": "Q99910974",
+      "label_it": "Pincio",
+      "label_en": "Pincio",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Basilica di San Pietro": {
+      "qid": "Q12512",
+      "label_it": "Basilica di San Pietro",
+      "label_en": "St. Peter's Basilica",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Piazza del Campidoglio": {
+      "qid": "Q34921",
+      "label_it": "Piazza del Campidoglio",
+      "label_en": "Piazza del Campidoglio",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "San Giuseppe dei Falegnami": {
+      "qid": "Q1312988",
+      "label_it": "San Giuseppe dei Falegnami",
+      "label_en": "San Giuseppe dei Falegnami",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Castel Sant'Angelo": {
+      "qid": "Q486382",
+      "label_it": "Castel Sant'Angelo",
+      "label_en": "Castel Sant'Angelo",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Ponte Sant'Angelo": {
+      "qid": "Q870476",
+      "label_it": "Ponte Sant'Angelo",
+      "label_en": "Ponte Sant'Angelo",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Biblioteca Apostolica Vaticana": {
+      "qid": "Q213678",
+      "label_it": "Biblioteca Apostolica Vaticana",
+      "label_en": "Vatican Library",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Pontificia Accademia delle Scienze": {
+      "qid": "Q938622",
+      "label_it": "Pontificia Accademia delle Scienze",
+      "label_en": "Pontificia Accademia delle Scienze",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Roma": {
+      "qid": "Q220",
+      "label_it": "Roma",
+      "label_en": "Rome",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Marcello Piacentini": {
+      "qid": "Q1382978",
+      "label_it": "Marcello Piacentini",
+      "label_en": "Marcello Piacentini",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Alessandro Limongelli": {
+      "qid": "Q16525155",
+      "label_it": "Alessandro Limongelli",
+      "label_en": "Alessandro Limongelli",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Dellerano": {
+      "qid": null,
+      "label_it": "Dellerano",
+      "label_en": "Dellerano",
+      "result": "not_found",
+      "checked": "2026-11-27"
+    },
+    "A. Dellerano": {
+      "qid": null,
+      "label_it": "A. Dellerano",
+      "label_en": "A. Dellerano",
+      "result": "not_found",
+      "checked": "2026-11-27"
     }
   }
 }
