@@ -159,6 +159,38 @@
     "Q810075": {
       "label_it": "basilica di San Domenico",
       "label_en": "Basilica of San Domenico"
+    },
+    "Q6088": {
+      "label_it": "Alessandria",
+      "label_en": "Alessandria"
+    },
+    "Q20436": {
+      "label_it": "Foligno",
+      "label_en": "Foligno"
+    },
+    "Q590512": {
+      "label_it": "Lorenzo Perosi",
+      "label_en": "Lorenzo Perosi"
+    },
+    "Q2219479": {
+      "label_it": "San Feliciano",
+      "label_en": "San Feliciano"
+    },
+    "Q3171725": {
+      "label_it": "Jean Despujols",
+      "label_en": "Jean Despujols"
+    },
+    "Q1441668": {
+      "label_it": "Amalfi",
+      "label_en": "Amalfi"
+    },
+    "Q224202": {
+      "label_it": "Magliano Sabina",
+      "label_en": "Magliano Sabina"
+    },
+    "Q224692": {
+      "label_it": "Torri in Sabina",
+      "label_en": "Torri in Sabina"
     }
   }
 }

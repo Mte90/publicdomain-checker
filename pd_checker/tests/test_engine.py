@@ -1453,3 +1453,33 @@ def test_item_commons_categories_override_context():
     verdict2 = {**verdict, "extracted_facts": {"document_type": "photo"}}
     result2 = wikidata.build(verdict2, ctx)
     assert result2["categories"] == ["Category:Rieti"]
+
+
+def test_dashboard_lightbox_close_is_class_based():
+    """Overlay visible ONLY via the .open class: no :target in CSS, delegated close bound."""
+    from pd_checker.core import report
+
+    verdict = {
+        "file": "Varie/1_fronte.jpg",
+        "status": "public_domain",
+        "confidence": "medium",
+        "upload": {"flag": "ready", "reason": "ok"},
+        "commons_templates": ["{{PD-Italy-EdictGov}}"],
+        "commons_templates_candidate": [],
+        "extracted_facts": {
+            "document_type": "document", "reference_year": 1952,
+            "visible_text": "x", "images": ["Varie/1_fronte.jpg"],
+            "content_title": "Test",
+        },
+        "commons_categories": ["Category:Rieti"],
+        "information": {"description": "d", "date": "1952", "source": "s", "author": "a"},
+        "wikidata": {"statements": [], "categories": ["Category:Rieti"], "review": [],
+                     "information": {"description": "d", "date": "1952", "source": "s", "author": "a"},
+                     "entities_to_create": []},
+        "notes": [],
+    }
+    html = report._generate_html([verdict], ".", {}, {}, "pd-only", None)
+    assert ".lightbox-overlay:target" not in html, "the :target selector must be gone"
+    assert ".lightbox-overlay.open {" in html
+    assert "t.closest('.lightbox-close')" in html, "delegated close must be bound"
+    assert "window.scrollTo(0, savedScrollY)" in html

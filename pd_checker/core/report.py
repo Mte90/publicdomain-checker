@@ -952,7 +952,7 @@ def _generate_html(verdicts: list[dict], images_base: str | None, ctx: any, run_
       padding: var(--spacing-lg);
       backdrop-filter: blur(4px);
     }}
-    .lightbox-overlay:target {{
+    .lightbox-overlay.open {{
       display: flex;
     }}
     .lightbox-content {{
@@ -1503,7 +1503,7 @@ def _generate_html(verdicts: list[dict], images_base: str | None, ctx: any, run_
                 lightbox_html += f'''
                 <div class="lightbox-overlay" id="light-{img}">
                   <div class="lightbox-content">
-                    <a href="#main" class="lightbox-close">Chiudi ×</a>
+                    <a href="#" class="lightbox-close" onclick="closeLightbox(event)">Chiudi ×</a>
                     <img src="{images_base}/{img}" alt="{img}">
                   </div>
                 </div>
@@ -1536,11 +1536,40 @@ def _generate_html(verdicts: list[dict], images_base: str | None, ctx: any, run_
       </footer>
       <a href="#main" class="back-to-top">Torna su ↑</a>
       <script>
-        document.addEventListener('keydown', function (event) {{
-          if (event.key === 'Escape' && document.querySelector('.lightbox-overlay:target')) {{
-            window.location.hash = '';
+        var savedScrollY = 0;
+        function syncLightboxes() {{
+          var h = location.hash || '';
+          document.querySelectorAll('.lightbox-overlay.open').forEach(function (el) {{
+            if ('#' + el.id !== h) {{ el.classList.remove('open'); }}
+          }});
+          if (h.indexOf('#light-') === 0) {{
+            var el = document.getElementById(h.slice(1));
+            if (el && !el.classList.contains('open')) {{
+              savedScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+              el.classList.add('open');
+            }}
           }}
+        }}
+        function closeLightbox(ev) {{
+          if (ev) {{ ev.preventDefault(); }}
+          document.querySelectorAll('.lightbox-overlay.open').forEach(function (el) {{
+            el.classList.remove('open');
+          }});
+          try {{ history.replaceState(null, '', location.pathname + location.search); }}
+          catch (e) {{ window.location.hash = ''; }}
+          window.scrollTo(0, savedScrollY);
+        }}
+        window.addEventListener('hashchange', syncLightboxes);
+        document.addEventListener('keydown', function (event) {{
+          if (event.key === 'Escape') {{ closeLightbox(); }}
         }});
+        document.addEventListener('click', function (event) {{
+          var t = event.target;
+          if (!t || !t.classList) {{ return; }}
+          if (t.closest && t.closest('.lightbox-close')) {{ closeLightbox(event); return; }}
+          if (t.classList.contains('lightbox-overlay')) {{ closeLightbox(event); }}
+        }});
+        syncLightboxes();
       </script>
     </body>
     </html>

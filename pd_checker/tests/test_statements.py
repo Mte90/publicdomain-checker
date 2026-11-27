@@ -52,3 +52,31 @@ def test_p571_manuscript_date_is_documentary():
     assert p571["precision"] == 9
     assert "qualifiers" not in p571
     assert "reason" not in p571
+
+
+def test_p180_miner_honors_depicts_exclude(monkeypatch):
+    """Mentions on the address side are not subjects: depicts_exclude suppresses them."""
+    def fake_cache():
+        return {
+            "note": "test",
+            "names": {
+                "Rieti": {"qid": "Q13396", "label_it": "Rieti", "label_en": "Rieti", "result": "ok", "checked": "2026-11-27"},
+                "Perugia": {"qid": "Q3437", "label_it": "Perugia", "label_en": "Perugia", "result": "ok", "checked": "2026-11-27"},
+            },
+        }
+
+    monkeypatch.setattr(catalogs, "_load_wd_cache", fake_cache)
+    verdict = {
+        "file": "varie/7_fronte.png",
+        "status": "public_domain",
+        "extracted_facts": {
+            "document_type": "postcard",
+            "visible_text": "cartolina patriottica, indirizzo: Gent. Sig. Marchese Vecchiarelli, Rieti (Perugia)",
+            "images": ["varie/7_fronte.png"],
+            "reference_year": 1914,
+            "depicts_exclude": ["Rieti", "Perugia"],
+        },
+    }
+    block = wikidata.build(verdict, {"depicts": []})
+    p180_values = [s["value"] for s in block["statements"] if s["property"] == "P180"]
+    assert p180_values == []

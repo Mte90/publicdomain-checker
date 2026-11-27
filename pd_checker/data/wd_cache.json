@@ -306,6 +306,108 @@
       "checked": "2026-11-26",
       "note": "alias per il testo a stampa «94° FANTERIA» (94º Reggimento fanteria, Q3600191)",
       "source": "curated: matched label verified live (2026-11-27)"
+    },
+    "Alessandria": {
+      "qid": "Q6088",
+      "label_it": "Alessandria",
+      "label_en": "Alessandria",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Luigi Gay - Torino": {
+      "qid": null,
+      "label_it": "Luigi Gay - Torino",
+      "label_en": "Luigi Gay - Torino",
+      "result": "not_found",
+      "checked": "2026-11-27"
+    },
+    "Litografia G. Tilli - Perugia": {
+      "qid": null,
+      "label_it": "Litografia G. Tilli - Perugia",
+      "label_en": "Litografia G. Tilli - Perugia",
+      "result": "not_found",
+      "checked": "2026-11-27"
+    },
+    "Foligno": {
+      "qid": "Q20436",
+      "label_it": "Foligno",
+      "label_en": "Foligno",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Lorenzo Perosi": {
+      "qid": "Q590512",
+      "label_it": "Lorenzo Perosi",
+      "label_en": "Lorenzo Perosi",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Jean Despujols": {
+      "qid": "Q3171725",
+      "label_it": "Jean Despujols",
+      "label_en": "Jean Despujols",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Amalfi": {
+      "qid": "Q1441668",
+      "label_it": "Amalfi",
+      "label_en": "Amalfi",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "San Feliciano": {
+      "qid": "Q2219479",
+      "label_it": "San Feliciano",
+      "label_en": "San Feliciano",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Hotel Cappuccini": {
+      "qid": null,
+      "label_it": "Hotel Cappuccini",
+      "label_en": "Hotel Cappuccini",
+      "result": "not_found",
+      "checked": "2026-11-27"
+    },
+    "S. Feliciano": {
+      "qid": "Q2219479",
+      "label_it": "San Feliciano",
+      "label_en": "San Feliciano",
+      "result": "ok",
+      "checked": "2026-11-27",
+      "note": "alias forma a stampa",
+      "source": "curated: alias della forma a stampa, etichetta verificata live (2026-11-27)"
+    },
+    "M.o Perosi": {
+      "qid": "Q590512",
+      "label_it": "Lorenzo Perosi",
+      "label_en": "Lorenzo Perosi",
+      "result": "ok",
+      "checked": "2026-11-27",
+      "note": "alias forma a stampa",
+      "source": "curated: alias della forma a stampa, etichetta verificata live (2026-11-27)"
+    },
+    "Magliano Sabina": {
+      "qid": "Q224202",
+      "label_it": "Magliano Sabina",
+      "label_en": "Magliano Sabina",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Torri in Sabina": {
+      "qid": "Q224692",
+      "label_it": "Torri in Sabina",
+      "label_en": "Torri in Sabina",
+      "result": "ok",
+      "checked": "2026-11-27"
+    },
+    "Regio istituto superiore agrario di Perugia": {
+      "qid": null,
+      "label_it": "Regio istituto superiore agrario di Perugia",
+      "label_en": "Regio istituto superiore agrario di Perugia",
+      "result": "not_found",
+      "checked": "2026-11-27"
     }
   }
 }

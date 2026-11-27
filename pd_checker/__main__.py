@@ -1010,6 +1010,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     resolve_parser.add_argument("name", help="Name to resolve to QID")
     resolve_parser.add_argument("--live", action="store_true", help="Perform live Wikidata API lookup on cache miss; writes result to wd_cache.json")
+    resolve_parser.add_argument("--confirm", metavar="QID", help="Cache a human-confirmed QID for this name (after reviewing ambiguous candidates); fetches labels live")
 
     # create-entity subcommand
     create_entity_parser = subparsers.add_parser(
@@ -1166,6 +1167,8 @@ def main(argv: list[str] | None = None) -> int:
         resolve_args = [args.name]
         if getattr(args, "live", False):
             resolve_args.append("--live")
+        if getattr(args, "confirm", None):
+            resolve_args += ["--confirm", args.confirm]
         return cmd_resolve(resolve_args)
     elif args.command == "templates-enrich":
         return cmd_templates_enrich([])

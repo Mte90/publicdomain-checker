@@ -367,6 +367,8 @@ python3 -m pd_checker create-entity <folder> --live
 The dashboard is the human's review surface.
 Every "Cosa fare adesso" action maps to something the agent can execute — when the human raises it, answer with the matching action, never by hand-editing verdicts:
 
+- "Nuovo materiale o file rimpiazzati" — when a folder's disk content changes between rounds, facts.json is stale for every changed file: re-extract those scans with a fresh vision read and rebuild those items from scratch.
+  Never reuse a facts entry because the filename matches: compare the on-disk file set (and sizes) against the claimed `images` — a same-name file of a different size is a DIFFERENT object, and old facts on it are mixed data, not history (owner correction 2026-11-27: old descriptions ended up on replacement scans).
 - "Conferma la data" — re-inspect the scan, correct `reference_year` / `year_source` in `pd_data/facts.json`, re-run.
   A year WRITTEN on the item is THE date — printed, postmarked, or handwritten on the document (`year_source`: `visible_text` / `postmark` / `manuscript`): it needs no confirmation and it decides boundaries.
   Only non-documentary sources (`visual_estimate`, `folder_context`, missing) require the owner's confirmation before the year counts.
@@ -376,8 +378,9 @@ Every "Cosa fare adesso" action maps to something the agent can execute — when
   Ambiguous (exit 2) means the top Wikidata hits do not coincide with the name: the candidates are printed for the human to confirm — never auto-cache a weak match; cache the human-confirmed QID with `resolve "<name>" --confirm <QID>` (the only sanctioned write after review, fetches labels live).
 - "Copertura entità" — after every extraction or dashboard review, diff the transcription's named entities (places, churches, institutions, military units, subjects of the depicted work) against the emitted statements: EVERY named subject must be either depicted (a P180 with a verified QID) or explicitly escalated (resolved `not_found` / `ambiguous`).
   An entity mentioned in `visible_text` that silently produces no statement is a review defect.
-  Labels on Wikidata rarely match prints letter-by-letter (`S.
-  Domenico`, `94° FANTERIA`, abbreviations): resolve the real item, then add the exact printed form as a cache alias pruned to context (verify the label live before caching; wrong-entity false matches are real — e.g. a church in another city mistaken for the intended subject).
+  Mentions on the address or message side are NOT subjects: the recipient's city, street or province on a mailed back must never become an SDC `depicts` claim — declare those strings in facts `depicts_exclude` and the text-match will skip them for that item.
+  Labels on Wikidata rarely match prints letter-by-letter (`S. Domenico`, `94° FANTERIA`, abbreviations): resolve the real item, then add the exact printed form as a cache alias pruned to context (verify the label live before caching; wrong-entity false matches are real — e.g. a church in another city mistaken for the intended subject).
+  The author credited on the item is P170 (creator), never `depicts`: write the full authoritative author name in facts and never alias a printed author form in the cache — it would fire the text-match and depict the author instead of the work (owner correction 2026-11-27, Despujols card).
 - "Categorie per contenuto" — after the entity pass, propose Commons categories from the DEPICTED SUBJECT of each item, never from the archive's location: the dedicated regiment category for a military group photo («Category:94º Reggimento fanteria "Messina"»), the city of depicted subject and its painter/church/saint categories for a postcard reproduction, the issuing institution's categories for documents.
   Method: Commons search in namespace 14 using the subjects' names from the transcription and the resolved entities; prefer DEDICATED subject categories over generic ones («Category:Siena» is fine as support, but a dedicated subject category must lead when it exists).
   NEVER assign a category without verifying it exists: check every title live, then record it in cat_cache with the check date.

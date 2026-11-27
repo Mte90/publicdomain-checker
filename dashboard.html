@@ -746,7 +746,7 @@
       padding: var(--spacing-lg);
       backdrop-filter: blur(4px);
     }
-    .lightbox-overlay:target {
+    .lightbox-overlay.open {
       display: flex;
     }
     .lightbox-content {
@@ -846,14 +846,14 @@
     </head>
     <body id="main">
       <div class="app-container">
-        <div class="sidebar"><h3 class="sidebar-title">Navigazione</h3><div class="nav-group"><a href="#set-Varie" class="nav-set">Varie</a><a href="#item-Varie/1_fronte_1924.png" class="nav-item"><span class="status-dot status-green"></span>Varie/1_fronte_1924.png</a><a href="#item-Varie/2_fronte.png" class="nav-item"><span class="status-dot status-green"></span>Varie/2_fronte.png</a><a href="#item-Varie/3_fronte.png" class="nav-item"><span class="status-dot status-green"></span>Varie/3_fronte.png</a><a href="#item-Varie/4_fronte.png" class="nav-item"><span class="status-dot status-green"></span>Varie/4_fronte.png</a><a href="#item-Varie/6.png" class="nav-item"><span class="status-dot status-green"></span>Varie/6.png</a></div></div>
+        <div class="sidebar"><h3 class="sidebar-title">Navigazione</h3><div class="nav-group"><a href="#set-Varie" class="nav-set">Varie</a><a href="#item-Varie/3_fronte.png" class="nav-item"><span class="status-dot status-amber"></span>Varie/3_fronte.png</a><a href="#item-Varie/1_fronte.jpg" class="nav-item"><span class="status-dot status-green"></span>Varie/1_fronte.jpg</a><a href="#item-Varie/2_fronte.JPG" class="nav-item"><span class="status-dot status-green"></span>Varie/2_fronte.JPG</a><a href="#item-Varie/4_fronte.png" class="nav-item"><span class="status-dot status-green"></span>Varie/4_fronte.png</a></div></div>
         <div class="main-content">
           
     <div class="dashboard-header">
       <h1 class="dashboard-title">Dashboard di Revisione Pubblico Dominio</h1>
       <div class="verdict-box">
-        <p class="verdict-primary">Verdetto: Tutti gli item sono nel pubblico dominio</p>
-        <p class="verdict-merged-counts">Pubblico Dominio: 5 | Non PD: 0 | Incerti: 0</p>
+        <p class="verdict-primary">Verdetto: Alcuni item richiedono revisione o non sono nel pubblico dominio</p>
+        <p class="verdict-merged-counts">Pubblico Dominio: 3 | Non PD: 0 | Incerti: 1</p>
       </div>
     </div>
     <input type="radio" name="tab" id="tab-verdetto" class="tab-radio" checked>
@@ -867,14 +867,14 @@
     <div class="tab-panels">
       <div class="tab-panel tab-panel-verdetto" role="tabpanel" id="panel-verdetto">
         <div class="verdetto-summary">
-          <p class="verdict-merged-counts">Pubblico Dominio: 5 | Non PD: 0 | Incerti: 0</p>
+          <p class="verdict-merged-counts">Pubblico Dominio: 3 | Non PD: 0 | Incerti: 1</p>
         </div>
       </div>
       <div class="tab-panel tab-panel-contesto" role="tabpanel" id="panel-contesto">
         <div class="context-panel">
           <h2 class="panel-title">Contesto cartella</h2>
             <div class="context-fields">
-              <p><strong class="field-label">Cartella:</strong> Varie</p> <p><strong class="field-label">Collezione:</strong> Archivio Vecchiarelli (Rieti/Greccio)</p> <p><strong class="field-label">Provenienza:</strong> Archivio di Daniele Scasciafratte</p> <p><strong class="field-label">Titolare dei diritti:</strong> private</p> <p><strong class="field-label">Paese di origine:</strong> IT</p> <p><strong class="field-label">Categorie:</strong> [&#x27;Category:Rieti&#x27;]</p> <p><strong class="field-label">Note:</strong> Periodo non dichiarato dal proprietario: le date si leggono dai singoli documenti (anni stampati: 1918, 1921, 1949; locandine e fotografia senza anno leggibile). 3_fronte.png era un duplicato byte-identico di 4_fronte.png (stessa scansione, due nomi); il proprietario ha rimosso 3_fronte.png e conservato 4_fronte.png come file operativo dell&#x27;item (lettera del Municipio di Rieti, 1921). 6.png e 6_fronte.png sono documenti diversi (invito Quirinale 1949 vs locandina). upload_prefix da decidere in revisione. Dichiarazione del proprietario (2026-11-26): le quattro locandine teatrali del Teatro Flavio Vespasiano sono ritenute di pubblico dominio; verdetto applicato via owner_verdict in facts con template {{PD-Italy}}. Correzione del proprietario (2026-11-26): la fotografia di gruppo è il 94° Fanteria, 1935/36 — l&#x27;annotazione «— XIV —» stampata sul foglio è l&#x27;anno dell&#x27;era fascista.</p> <p><strong class="field-label">Upload Prefix:</strong> Archivio Vecchiarelli RietiGreccio</p>
+              <p><strong class="field-label">Cartella:</strong> Varie</p> <p><strong class="field-label">Collezione:</strong> Archivio Vecchiarelli (Rieti/Greccio)</p> <p><strong class="field-label">Provenienza:</strong> Archivio di Daniele Scasciafratte</p> <p><strong class="field-label">Titolare dei diritti:</strong> private</p> <p><strong class="field-label">Paese di origine:</strong> IT</p> <p><strong class="field-label">Categorie:</strong> [&#x27;Category:Rieti&#x27;]</p> <p><strong class="field-label">Note:</strong> Periodo non dichiarato dal proprietario: le date si leggono dai singoli documenti (anni stampati: 1918, 1921, 1949; locandine e fotografia senza anno leggibile). 3_fronte.png era un duplicato byte-identico di 4_fronte.png (stessa scansione, due nomi); il proprietario ha rimosso 3_fronte.png e conservato 4_fronte.png come file operativo dell&#x27;item (lettera del Municipio di Rieti, 1921). 6.png e 6_fronte.png sono documenti diversi (invito Quirinale 1949 vs locandina). upload_prefix da decidere in revisione. Dichiarazione del proprietario (2026-11-26): le quattro locandine teatrali del Teatro Flavio Vespasiano sono ritenute di pubblico dominio; verdetto applicato via owner_verdict in facts con template {{PD-Italy}}. Correzione del proprietario (2026-11-26): la fotografia di gruppo è il 94° Fanteria, 1935/36 — l&#x27;annotazione «— XIV —» stampata sul foglio è l&#x27;anno dell&#x27;era fascista.</p> <p><strong class="field-label">Autori noti:</strong> {&#x27;Jean Despujols&#x27;: 1965}</p> <p><strong class="field-label">Upload Prefix:</strong> Archivio Vecchiarelli RietiGreccio</p>
             </div>
         </div>
       </div>
@@ -882,7 +882,7 @@
         <div class="suggestions-panel">
           <h2 class="panel-title">Suggerimenti Generali</h2>
            <ul class="suggestions-list">
-             <li>Cartella attribuita a private: verifica chi detiene i diritti</li> <li>Mancano informazioni sul periodo nel contesto</li> <li>4 item con vincoli non-copyright (diritto all&#x27;immagine Artt. 96-97 / privacy): revisione umana necessaria anche se l&#x27;opera e&#x27; in pubblico dominio.</li>
+             <li>Cartella attribuita a private: verifica chi detiene i diritti</li> <li>Mancano informazioni sul periodo nel contesto</li> <li>1 item incerti: risolvere i dati mancanti prima di pubblicare (es. data di morte dell&#x27;autore).</li> <li>2 item con vincoli non-copyright (diritto all&#x27;immagine Artt. 96-97 / privacy): revisione umana necessaria anche se l&#x27;opera e&#x27; in pubblico dominio.</li>
            </ul>
         </div>
       </div>
@@ -906,166 +906,78 @@
       </div>
     </div>
     
-          <div class="set-section" id="set-Varie"><h2 class="set-title">Varie</h2><div class="status-summary"><span class="summary-green">PD: 5</span> <span class="summary-red">Non PD: 0</span> <span class="summary-amber">Incerti: 0</span></div>
-            <div class="card filter-status-public_domain filter-upload-ready" id="item-Varie/1_fronte_1924.png">
-              <div class="card-header">
-                <p class="filename">Varie/1_fronte_1924.png</p>
-                <div class="badges">
-                  <span class="badge status-green">Pubblico Dominio</span> <span class="upload-badge upload-ready">ready</span>
-                </div>
-              </div>
-              <div class="thumbnails-container">
-                <a href="#light-Varie/1_fronte_1924.png"><img src="./Varie/1_fronte_1924.png" class="thumbnail" alt="Varie/1_fronte_1924.png"></a><a href="#light-Varie/1_retro_1924.png"><img src="./Varie/1_retro_1924.png" class="thumbnail" alt="Varie/1_retro_1924.png"></a>
-              </div>
-              <div class="card-body">
-                <div class="upload-reason-line"><strong>Motivo upload:</strong> Politica 'all': caricamento voluto dall'utente; rimangono i blocchi: non-copyright: Artt. 96-97 - L. 633/1941 (diritto all'immagine della persona ritratta): se la foto ritrae persone riconoscibili serve il consenso della persona (o degli eredi), anche se l'opera e' in pubblico dominio., Corrispondenza manoscritta: serve il consenso del destinatario (o degli eredi) ai sensi dell'Art. 93.; dati mancanti: Confermare la classificazione semplice/artistica..</div>
-                <div class="filename-planned"><strong>Nome previsto su Commons:</strong><br>  Fronte: Cartolina Siena Sodoma Svenimento Santa Caterina.png<br>  Retro: Cartolina Siena Sodoma Svenimento Santa Caterina (retro).png<br><small>(da pubdom.json)</small></div>
-                <section class="issues-section">
-                  <h4 class="block-title">Problemi e Blocchi</h4>
-                   <ul class="issues-list">
-                     <li class="no-issues">Nessun problema rilevato</li>
-                   </ul>
-                </section>
-                <div class="what-to-do-block"><h4 class="block-title">Cosa fare adesso</h4><ul class="what-to-do-list"><li>Verificare: Artt. 96-97 - L. 633/1941 (diritto all'immagine della persona ritratta): se la foto ritrae persone riconoscibili serve il consenso della persona (o degli eredi), anche se l'opera e' in pubblico dominio.</li><li>Cartolina spedita a persona identificata: valuta il consenso dell'Art. 93 (destinatario/eredi)</li></ul></div>
-                <div class="date-determination"><h4 class="block-title">Determinazione della data</h4><p class="date-line">Nessun dato disponibile</p></div>
-                <div class="transcription-block"><h4 class="block-title">Trascrizione</h4><details class="ocr-side" open><summary>Trascrizione visione</summary><pre class="transcription">FRONTE: [nessun testo — riproduzione di dipinto: tre donne in pianto, una sorretta dalle altre, davanti a una colonna decorata, paesaggio con rovine] 
- RETRO: Siena - Chiesa di S. Domenico e Sodoma Sve[nimento] di Santa Caterina [lettura confermata dal proprietario: particolare dello Svenimento di Santa Caterina da Siena, affresco di Il Sodoma nella basilica di San Domenico a Siena] 
- [manoscritto: testo fitto quasi interamente illeggibile] 
- [timbro: POSTE ITALIANE 10 CENTESIMI (x3), effigie di Vittorio Emanuele III] 
- [timbro circolare: cifre 45-4?0 (non interpretabili come data)] 
- [manoscritto: … Vecchiarelli 
- Castel[illeggibile] 
- … America] 
- Giuntini Bentivoglio - Editore. 
- Proprietà riservata. 
- 41</pre></details></div>
-                <div class="meta-row">
-                  <span class="confidence">Confidenza: media</span>
-                </div>
-                
-                
-                <div class="two-col"><div class="licence-block"><h4 class="block-title">Licenze e Template</h4><ul class="licence-list"><li class="licence-tag"><a href="https://commons.wikimedia.org/wiki/Template:PD-Italy" target="_blank" rel="noopener">{{PD-Italy}}</a></li><li class="licence-tag source"><a href="https://commons.wikimedia.org/wiki/Template:Self-scanned" target="_blank" rel="noopener">{{Self-scanned}}</a></li><li class="licence-tag caveat"><a href="https://commons.wikimedia.org/wiki/Template:Personality%20rights" target="_blank" rel="noopener">{{Personality rights}}</a></li></ul></div><div class="licence-block cats-block"><h4 class="block-title">Categorie</h4><ul class="licence-list"><li class="cat-tag"><a href="https://commons.wikimedia.org/wiki/Category:Category:Siena" target="_blank" rel="noopener">Category:Siena</a></li><li class="cat-tag"><a href="https://commons.wikimedia.org/wiki/Category:Category:Basilica_of_San_Domenico_(Siena)" target="_blank" rel="noopener">Category:Basilica of San Domenico (Siena)</a></li><li class="cat-tag"><a href="https://commons.wikimedia.org/wiki/Category:Category:Sodoma" target="_blank" rel="noopener">Category:Sodoma</a></li><li class="cat-tag"><a href="https://commons.wikimedia.org/wiki/Category:Category:Catherine_of_Siena" target="_blank" rel="noopener">Category:Catherine of Siena</a></li><li class="cat-tag"><a href="https://commons.wikimedia.org/wiki/Category:Category:Postcards_of_Italy" target="_blank" rel="noopener">Category:Postcards of Italy</a></li></ul></div></div>
-                
-                <div class="wikidata-block"><h4 class="block-title">Dati per Wikidata</h4><h5 class="block-subtitle">Statements</h5><table class="wd-statements"><thead><tr><th class="col-prop">Proprietà</th><th class="col-val">Valore</th><th class="col-stat">Stato</th></tr></thead><tbody><tr><td>P31 — istanza di</td><td>postcard <a href="https://www.wikidata.org/wiki/Q192425" target="_blank" rel="noopener" class="wd-qid">Q192425</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P6216 — stato copyright</td><td>public domain <a href="https://www.wikidata.org/wiki/Q19652" target="_blank" rel="noopener" class="wd-qid">Q19652</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P275 — licenza</td><td>public domain <a href="https://www.wikidata.org/wiki/Q19652" target="_blank" rel="noopener" class="wd-qid">Q19652</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P571 — data di creazione</td><td>None</td><td><span class="wd-status-review">Rivedere</span></td></tr><tr><td>P180 — raffigura</td><td>Siena <a href="https://www.wikidata.org/wiki/Q2751" target="_blank" rel="noopener" class="wd-qid">Q2751</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P180 — raffigura</td><td>Il Sodoma <a href="https://www.wikidata.org/wiki/Q8506" target="_blank" rel="noopener" class="wd-qid">Q8506</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P180 — raffigura</td><td>Santa Caterina da Siena <a href="https://www.wikidata.org/wiki/Q229190" target="_blank" rel="noopener" class="wd-qid">Q229190</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P180 — raffigura</td><td>Chiesa di S. Domenico <a href="https://www.wikidata.org/wiki/Q810075" target="_blank" rel="noopener" class="wd-qid">Q810075</a></td><td><span class="wd-status-ok">OK</span></td></tr></tbody></table><div class="wd-review"><strong class="review-label">Info:</strong> FRONTE: [nessun testo — riproduzione di dipinto: tre donne in pianto, una sorretta dalle altre, davanti a una colonna decorata, paesaggio con rovine]  /  RETRO: Siena - Chiesa di S. Domenico e Sodoma Sve[nimento] di Santa Caterina [lettura confermata dal proprietario: particolare dello Svenimento di Santa Caterina da Siena, affresco di Il Sodoma nella basilica di San Domenico a Siena]  /  [manoscritto: testo fitto quasi interamente illeggibile]  /  [timbro: POSTE ITALIANE 10 CENTESIMI (x3), effigie di Vittorio Emanuele III]  /  [timbro circolare: cifre 45-4?0 (non interpretabili come data)]  /  [manoscritto: … Vecchiarelli  /  Castel[illeggibile]  /  … America]  /  Giuntini Bentivoglio - Editore.  /  Proprietà riservata.  /  41</div></div>
-                <div class="trail-block">
-                  <details>
-                    <summary>Dettagli della pipeline</summary>
-                    <div class="scrollable">
-                       <dl class="pipeline-details">
-<dt>Versione tabelle regole:</dt>
-<dd>multi@2026-02-URAA [IT L.633/1941+L.182/2025 | GB CDPA 1988 | VA L.CXCVII/2017 | URAA condition]</dd>
-<dt>Data generazione:</dt>
-<dd>2023-11-28</dd>
-<dt>Politica di upload:</dt>
-<dd>tutto — l&#x27;utente sceglie di procedere comunque: tutti gli item sono marcato &#x27;Pronti&#x27; (anche incerti), ma le ragioni e i template restano onesti sui blocchi/limiti.</dd>
-</dl>
-                    </div>
-                  </details>
-                </div>
-              </div>
-            </div>
-            
-            <div class="card filter-status-public_domain filter-upload-ready" id="item-Varie/2_fronte.png">
-              <div class="card-header">
-                <p class="filename">Varie/2_fronte.png</p>
-                <div class="badges">
-                  <span class="badge status-green">Pubblico Dominio</span> <span class="upload-badge upload-ready">ready</span>
-                </div>
-              </div>
-              <div class="thumbnails-container">
-                <a href="#light-Varie/2_fronte.png"><img src="./Varie/2_fronte.png" class="thumbnail" alt="Varie/2_fronte.png"></a><a href="#light-Varie/2_retro.png"><img src="./Varie/2_retro.png" class="thumbnail" alt="Varie/2_retro.png"></a>
-              </div>
-              <div class="card-body">
-                <div class="upload-reason-line"><strong>Motivo upload:</strong> Politica 'all': caricamento voluto dall'utente; rimangono i blocchi: non-copyright: Artt. 96-97 - L. 633/1941 (diritto all'immagine della persona ritratta): se la foto ritrae persone riconoscibili serve il consenso della persona (o degli eredi), anche se l'opera e' in pubblico dominio..</div>
-                <div class="filename-planned"><strong>Nome previsto su Commons:</strong><br>  Fronte: Fotografia ricordo 94° Fanteria 1936.png<br>  Retro: Fotografia ricordo 94° Fanteria 1936 (retro).png<br><small>(da pubdom.json)</small></div>
-                <section class="issues-section">
-                  <h4 class="block-title">Problemi e Blocchi</h4>
-                   <ul class="issues-list">
-                     <li class="no-issues">Nessun problema rilevato</li>
-                   </ul>
-                </section>
-                <div class="what-to-do-block"><h4 class="block-title">Cosa fare adesso</h4><ul class="what-to-do-list"><li>Verificare: Artt. 96-97 - L. 633/1941 (diritto all'immagine della persona ritratta): se la foto ritrae persone riconoscibili serve il consenso della persona (o degli eredi), anche se l'opera e' in pubblico dominio.</li></ul></div>
-                <div class="date-determination"><h4 class="block-title">Determinazione della data</h4><p class="date-line">Evidenza: — XIV — (anno XIV era fascista = 1936); annata A.35-36</p><p class="date-line">Anno di riferimento: 1936</p><p class="date-line">Fonte: Testo visibile</p></div>
-                <div class="transcription-block"><h4 class="block-title">Trascrizione</h4><details class="ocr-side" open><summary>Trascrizione visione</summary><pre class="transcription">FRONTE: 94° FANTERIA 
- [a sinistra, grandi lettere maiuscole isolate disposte in verticale: L ... A] 
- NOI 
- TIREREMO 
- DRITTO 
- A.35-36 
- — XIV — 
- [didascalie dei ritratti, prima fascia:] St.L. MANZINI 
- T.C. PARISI 
- ERA. TONUCCI 
- T.T. ANGE[illegibile] 
- [griglia dei ritratti, righe leggibili:] L. BENEDETTI 
- S. CIAROCCHI 
- G. D&#x27;AVELLA 
- DE DONINITIS 
- M. DE LEO 
- F. FORESTI 
- D. GIACCI 
- L. GIUFFR[illegibile] 
- M. BRUNO 
- E. CIPOLINI 
- A. DE VITO 
- M. FERRARI 
- A. FRANCHINI 
- D. GIACOMANDI 
- O. IEMOLO 
- A. IEZZI 
- [circa 100 ritratti in griglia, ciascuno con didascalia di cognome, in gran parte troppo piccoli per una trascrizione affidabile] 
- [scritta manoscritta in alto a sinistra: Vaccari [illegibile]] 
- [timbro a secco ovale in basso a sinistra: A. T[illegibile] / FANO] 
-
- RETRO: [numerose firme manoscritte, in gran parte illeggibili; leggibili approssimativamente:] D. Benedetto 
- Emilio [illegibile] 
- [firma illeggibile] 
- Dueto [illegibile] 
- Ginolavaram 
- d. Ambrosi[illegibile] 
- Ariela e Wlassich[illegibile] 
- Giovanni [illegibile] 
- Mart.li 20 
- [timbro a secco ovale, speculare, in basso a destra: A. E[illegibile] / FANO]</pre></details></div>
-                <div class="meta-row">
-                  <span class="confidence">Confidenza: media</span>
-                </div>
-                
-                
-                <div class="two-col"><div class="licence-block"><h4 class="block-title">Licenze e Template</h4><ul class="licence-list"><li class="licence-tag"><a href="https://commons.wikimedia.org/wiki/Template:PD-Italy" target="_blank" rel="noopener">{{PD-Italy}}</a></li><li class="licence-tag source"><a href="https://commons.wikimedia.org/wiki/Template:Self-scanned" target="_blank" rel="noopener">{{Self-scanned}}</a></li><li class="licence-tag caveat"><a href="https://commons.wikimedia.org/wiki/Template:Personality%20rights" target="_blank" rel="noopener">{{Personality rights}}</a></li></ul></div><div class="licence-block cats-block"><h4 class="block-title">Categorie</h4><ul class="licence-list"><li class="cat-tag"><a href="https://commons.wikimedia.org/wiki/Category:Category:94º_Reggimento_fanteria_"Messina"" target="_blank" rel="noopener">Category:94º Reggimento fanteria &quot;Messina&quot;</a></li><li class="cat-tag"><a href="https://commons.wikimedia.org/wiki/Category:Category:Infantry_regiments_of_Italy" target="_blank" rel="noopener">Category:Infantry regiments of Italy</a></li></ul></div></div>
-                
-                <div class="wikidata-block"><h4 class="block-title">Dati per Wikidata</h4><h5 class="block-subtitle">Statements</h5><table class="wd-statements"><thead><tr><th class="col-prop">Proprietà</th><th class="col-val">Valore</th><th class="col-stat">Stato</th></tr></thead><tbody><tr><td>P31 — istanza di</td><td>photo <a href="https://www.wikidata.org/wiki/Q125191" target="_blank" rel="noopener" class="wd-qid">Q125191</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P6216 — stato copyright</td><td>public domain <a href="https://www.wikidata.org/wiki/Q19652" target="_blank" rel="noopener" class="wd-qid">Q19652</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P275 — licenza</td><td>public domain <a href="https://www.wikidata.org/wiki/Q19652" target="_blank" rel="noopener" class="wd-qid">Q19652</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P571 — data di creazione</td><td>1936</td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P180 — raffigura</td><td>94° Fanteria <a href="https://www.wikidata.org/wiki/Q3600191" target="_blank" rel="noopener" class="wd-qid">Q3600191</a></td><td><span class="wd-status-ok">OK</span></td></tr></tbody></table><div class="wd-review"><strong class="review-label">Info:</strong> FRONTE: 94° FANTERIA  /  [a sinistra, grandi lettere maiuscole isolate disposte in verticale: L ... A]  /  NOI  /  TIREREMO  /  DRITTO  /  A.35-36  /  — XIV —  /  [didascalie dei ritratti, prima fascia:] St.L. MANZINI  /  T.C. PARISI  /  ERA. TONUCCI  /  T.T. ANGE[illegibile]  /  [griglia dei ritratti, righe leggibili:] L. BENEDETTI  /  S. CIAROCCHI  /  G. D'AVELLA  /  DE DONINITIS  /  M. DE LEO  /  F. FORESTI  /  D. GIACCI  /  L. GIUFFR[illegibile]  /  M. BRUNO  /  E. CIPOLINI  /  A. DE VITO  /  M. FERRARI  /  A. FRANCHINI  /  D. GIACOMANDI  /  O. IEMOLO  /  A. IEZZI  /  [circa 100 ritratti in griglia, ciascuno con didascalia di cognome, in gran parte troppo piccoli per una trascrizione affidabile]  /  [scritta manoscritta in alto a sinistra: Vaccari [illegibile]]  /  [timbro a secco ovale in basso a sinistra: A. T[illegibile] / FANO]  /  /  RETRO: [numerose firme manoscritte, in gran parte illeggibili; leggibili approssimativamente:] D. Benedetto  /  Emilio [illegibile]  /  [firma illeggibile]  /  Dueto [illegibile]  /  Ginolavaram  /  d. Ambrosi[illegibile]  /  Ariela e Wlassich[illegibile]  /  Giovanni [illegibile]  /  Mart.li 20  /  [timbro a secco ovale, speculare, in basso a destra: A. E[illegibile] / FANO]</div></div>
-                <div class="trail-block">
-                  <details>
-                    <summary>Dettagli della pipeline</summary>
-                    <div class="scrollable">
-                       <dl class="pipeline-details">
-<dt>Versione tabelle regole:</dt>
-<dd>multi@2026-02-URAA [IT L.633/1941+L.182/2025 | GB CDPA 1988 | VA L.CXCVII/2017 | URAA condition]</dd>
-<dt>Data generazione:</dt>
-<dd>2023-11-28</dd>
-<dt>Politica di upload:</dt>
-<dd>tutto — l&#x27;utente sceglie di procedere comunque: tutti gli item sono marcato &#x27;Pronti&#x27; (anche incerti), ma le ragioni e i template restano onesti sui blocchi/limiti.</dd>
-</dl>
-                    </div>
-                  </details>
-                </div>
-              </div>
-            </div>
-            
-            <div class="card filter-status-public_domain filter-upload-ready" id="item-Varie/3_fronte.png">
+          <div class="set-section" id="set-Varie"><h2 class="set-title">Varie</h2><div class="status-summary"><span class="summary-green">PD: 3</span> <span class="summary-red">Non PD: 0</span> <span class="summary-amber">Incerti: 1</span></div>
+            <div class="card filter-status-uncertain filter-upload-review" id="item-Varie/3_fronte.png">
               <div class="card-header">
                 <p class="filename">Varie/3_fronte.png</p>
                 <div class="badges">
+                  <span class="badge status-amber">Incerto</span> <span class="upload-badge upload-review">Da rivedere</span>
+                </div>
+              </div>
+              <div class="thumbnails-container">
+                <a href="#light-Varie/3_fronte.png"><img src="./Varie/3_fronte.png" class="thumbnail" alt="Varie/3_fronte.png"></a><a href="#light-Varie/3_retro.png"><img src="./Varie/3_retro.png" class="thumbnail" alt="Varie/3_retro.png"></a>
+              </div>
+              <div class="card-body">
+                <div class="upload-reason-line"><strong>Motivo upload:</strong> In pubblico dominio ma con confidenza bassa: rivedere prima.</div>
+                <div class="filename-planned"><strong>Nome previsto su Commons:</strong><br>  Fronte: Cartolina illustrata Maternité di J. Despujols 1925.png<br>  Retro: Cartolina illustrata Maternité di J. Despujols 1925 (retro).png<br><small>(da pubdom.json)</small></div>
+                <section class="issues-section">
+                  <h4 class="block-title">Problemi e Blocchi</h4>
+                   <ul class="issues-list">
+                     <li class="no-issues">Nessun problema rilevato</li>
+                   </ul>
+                </section>
+                <div class="what-to-do-block"><h4 class="block-title">Cosa fare adesso</h4><ul class="what-to-do-list"><li>Cartolina spedita a persona identificata: valuta il consenso dell'Art. 93 (destinatario/eredi)</li><li>Revisione upload richiesta: In pubblico dominio ma con confidenza bassa: rivedere prima.</li></ul></div>
+                <div class="date-determination"><h4 class="block-title">Determinazione della data</h4><p class="date-line">Evidenza: annullo 17.3.25 (citta' illeggibile)</p><p class="date-line">Anno di riferimento: 1925</p><p class="date-line">Fonte: Timbro postale</p></div>
+                <div class="transcription-block"><h4 class="block-title">Trascrizione</h4><details class="ocr-side" open><summary>Trascrizione visione</summary><pre class="transcription">7316 
+ J. Despujols 
+ MATERNITÉ 
+ RETRO: CARTE POST[illeggibile] 
+ [timbro: POSTE ITALIANE 20 CENTESIMI (x2, effigie del re)] 
+ [annullo: 17.3.25 
+ 05.450] 
+ Mre Vecchiarelli 
+ Norcia 
+ (Umbria) 
+ [manoscritto: fitta scrittura diagonale, in gran parte illeggibile]</pre></details></div>
+                <div class="meta-row">
+                  <span class="confidence">Confidenza: bassa</span>
+                </div>
+                
+                
+                <div class="two-col"><div class="licence-block"><h4 class="block-title">Licenze e Template</h4><ul class="licence-list"><li class="licence-tag source"><a href="https://commons.wikimedia.org/wiki/Template:Self-scanned" target="_blank" rel="noopener">{{Self-scanned}}</a></li></ul></div><div class="licence-block cats-block"><h4 class="block-title">Categorie</h4><ul class="licence-list"><li class="cat-tag"><a href="https://commons.wikimedia.org/wiki/Category:Category:Postcards_of_France" target="_blank" rel="noopener">Category:Postcards of France</a></li></ul></div></div>
+                
+                <div class="wikidata-block"><h4 class="block-title">Dati per Wikidata</h4><h5 class="block-subtitle">Statements</h5><table class="wd-statements"><thead><tr><th class="col-prop">Proprietà</th><th class="col-val">Valore</th><th class="col-stat">Stato</th></tr></thead><tbody><tr><td>P31 — istanza di</td><td>postcard <a href="https://www.wikidata.org/wiki/Q192425" target="_blank" rel="noopener" class="wd-qid">Q192425</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P571 — data di creazione</td><td>1925</td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P170 — autore</td><td>Jean Despujols <a href="https://www.wikidata.org/wiki/Q3171725" target="_blank" rel="noopener" class="wd-qid">Q3171725</a></td><td><span class="wd-status-ok">OK</span></td></tr></tbody></table><div class="wd-review"><strong class="review-label">Info:</strong> 7316  /  J. Despujols  /  MATERNITÉ  /  RETRO: CARTE POST[illeggibile]  /  [timbro: POSTE ITALIANE 20 CENTESIMI (x2, effigie del re)]  /  [annullo: 17.3.25  /  05.450]  /  Mre Vecchiarelli  /  Norcia  /  (Umbria)  /  [manoscritto: fitta scrittura diagonale, in gran parte illeggibile]</div></div>
+                <div class="trail-block">
+                  <details>
+                    <summary>Dettagli della pipeline</summary>
+                    <div class="scrollable">
+                       <dl class="pipeline-details">
+<dt>Versione tabelle regole:</dt>
+<dd>multi@2026-02-URAA [IT L.633/1941+L.182/2025 | GB CDPA 1988 | VA L.CXCVII/2017 | URAA condition]</dd>
+<dt>Data generazione:</dt>
+<dd>2023-11-28</dd>
+<dt>Politica di upload:</dt>
+<dd>solo copyright — un item è &#x27;Pronto&#x27; quando è in pubblico dominio con confidenza alta, anche con altri vincoli (l&#x27;alternativa &#x27;severo&#x27; richiede anche assenza di blocchi non-copyright).</dd>
+</dl>
+                    </div>
+                  </details>
+                </div>
+              </div>
+            </div>
+            
+            <div class="card filter-status-public_domain filter-upload-ready" id="item-Varie/1_fronte.jpg">
+              <div class="card-header">
+                <p class="filename">Varie/1_fronte.jpg</p>
+                <div class="badges">
                   <span class="badge status-green">Pubblico Dominio</span> <span class="upload-badge upload-ready">ready</span>
                 </div>
               </div>
               <div class="thumbnails-container">
-                <a href="#light-Varie/3_fronte.png"><img src="./Varie/3_fronte.png" class="thumbnail" alt="Varie/3_fronte.png"></a>
+                <a href="#light-Varie/1_fronte.jpg"><img src="./Varie/1_fronte.jpg" class="thumbnail" alt="Varie/1_fronte.jpg"></a><a href="#light-Varie/1_retro.jpg"><img src="./Varie/1_retro.jpg" class="thumbnail" alt="Varie/1_retro.jpg"></a>
               </div>
               <div class="card-body">
-                <div class="upload-reason-line"><strong>Motivo upload:</strong> In pubblico dominio, nessun vincolo: candidato per l'import manuale.</div>
-                <div class="filename-planned"><strong>Nome previsto su Commons:</strong> Tessera di riconoscimento militare Roma 1918.png (da pubdom.json)</div>
+                <div class="upload-reason-line"><strong>Motivo upload:</strong> In pubblico dominio (criterio solo copyright): candidato per l'import manuale.</div>
+                <div class="filename-planned"><strong>Nome previsto su Commons:</strong><br>  Fronte: Settimana della tecnica agraria Sabina 1952.jpg<br>  Retro: Settimana della tecnica agraria Sabina 1952.jpg<br><small>(da pubdom.json)</small></div>
                 <section class="issues-section">
                   <h4 class="block-title">Problemi e Blocchi</h4>
                    <ul class="issues-list">
@@ -1073,26 +985,27 @@
                    </ul>
                 </section>
                 <div class="what-to-do-block"><h4 class="block-title">Cosa fare adesso</h4><p class="no-action">Nessuna azione specifica richiesta</p></div>
-                <div class="date-determination"><h4 class="block-title">Determinazione della data</h4><p class="date-line">Evidenza: Roma, li 19 Febbraio 1918</p><p class="date-line">Anno di riferimento: 1918</p><p class="date-line">Fonte: manuscript</p></div>
-                <div class="transcription-block"><h4 class="block-title">Trascrizione</h4><details class="ocr-side" open><summary>Trascrizione visione</summary><pre class="transcription">COMANDO DIVISIONE TERRITORIALE 
- DI ROMA 
- [manoscritto: 15] [illeggibile] 
- Tessera di riconoscimento 
- Si permette al [manoscritto: Sold. Vecchiarelli Ippolito] del [manoscritto: Distaccamento … [illeggibile] C.B. 13] di pernottare fuori Caserma, con l&#x27;obbligo di ritirarsi non più tardi delle ore [manoscritto: 22.30]. 
- Si avverte che tale concessione verrà revocata, qualora si verifi-cassero inconvenienti, od il militare se ne rendesse immeritevole. 
- Roma, li [manoscritto: 19 Febbraio] 191[manoscritto: 8] 
- Firma dell&#x27;interessato [manoscritto: Ippolito Vecchiarelli] 
- IL CAPO DI STATO MAGGIORE [manoscritto: [illeggibile]] 
- [timbro: stemma circolare [illeggibile]] 
- TIP. G. PISTOLESI</pre></details></div>
+                <div class="date-determination"><h4 class="block-title">Determinazione della data</h4><p class="date-line">Evidenza: Rieti, 14 Febbraio 1952; Magliano Sabina 18-23 Febbraio 1952; Torri in Sabina 25 Febbraio - 1 Marzo 1952</p><p class="date-line">Anno di riferimento: 1952</p><p class="date-line">Fonte: Testo visibile</p></div>
+                <div class="transcription-block"><h4 class="block-title">Trascrizione</h4><details class="ocr-side" open><summary>Trascrizione visione</summary><pre class="transcription">MINISTERO DELL&#x27;AGRICOLTURA E DELLE FORESTE 
+ ISPETTORATO PROVINCIALE DELL&#x27;AGRICOLTURA RIETI 
+ La S. V. è invitata a partecipare alla «SETTIMANA DELLA TECNICA AGRICOLA» che avrà luogo, nelle ore pomeridiane, a MAGLIANO SABINA dal 18 al 23 Febbraio e a TORRI IN SABINA dal 25 Febbraio al 1° Marzo coll&#x27;intervento di illustri Docenti Universitari e Professori di Istituti Sperimentali. 
+ Rieti, 14 Febbraio 1952. 
+ IL CAPO DELL&#x27;ISPETTORATO 
+ I. Vecchiarelli 
+ Programma delle conferenze: 18-23 Febbraio 1952 (Prof. Mercuri Stanislao, Prof. Morani Valentino, Dott. Montico Piero, Ing. Fedele Francesco, Prof. Ceccucci Alberto, Dott. Meschi Giorgio); 25 Febbraio-1° Marzo 1952 (Prof. Frezzotti Giuseppe, Prof. Mercuri Stanislao, Dott. Montico Piero, Ing. Fedele Francesco, Dott. Scarapellini Mario, Ispettorato Agrario). 
+ RETRO: [copertina] SETTIMANA DELLA TECNICA AGRARIA 
+ MAGLIANO SABINA 18 - 23 FEBBRAIO 1952 
+ TORRI IN SABINA 25 FEBBRAIO - 1 MARZO 1952 
+ [illustrazione: spiga di frumento stilizzata] 
+ F.LLI FARAONI - RIETI</pre></details></div>
                 <div class="meta-row">
                   <span class="confidence">Confidenza: media</span>
                 </div>
                 
                 
-                <div class="two-col"><div class="licence-block"><h4 class="block-title">Licenze e Template</h4><ul class="licence-list"><li class="licence-tag"><a href="https://commons.wikimedia.org/wiki/Template:PD-Italy-EdictGov" target="_blank" rel="noopener">{{PD-Italy-EdictGov}}</a></li><li class="licence-tag source"><a href="https://commons.wikimedia.org/wiki/Template:Self-scanned" target="_blank" rel="noopener">{{Self-scanned}}</a></li></ul></div><div class="licence-block cats-block"><h4 class="block-title">Categorie</h4><ul class="licence-list"><li class="cat-tag"><a href="https://commons.wikimedia.org/wiki/Category:Category:Identity_documents_of_Italy" target="_blank" rel="noopener">Category:Identity documents of Italy</a></li><li class="cat-tag"><a href="https://commons.wikimedia.org/wiki/Category:Category:Military_documents_of_Italy" target="_blank" rel="noopener">Category:Military documents of Italy</a></li></ul></div></div>
+                <div class="two-col"><div class="licence-block"><h4 class="block-title">Licenze e Template</h4><ul class="licence-list"><li class="licence-tag"><a href="https://commons.wikimedia.org/wiki/Template:PD-Italy-EdictGov" target="_blank" rel="noopener">{{PD-Italy-EdictGov}}</a></li><li class="licence-tag source"><a href="https://commons.wikimedia.org/wiki/Template:Self-scanned" target="_blank" rel="noopener">{{Self-scanned}}</a></li></ul></div><div class="licence-block cats-block"><h4 class="block-title">Categorie</h4><ul class="licence-list"><li class="cat-tag"><a href="https://commons.wikimedia.org/wiki/Category:Category:Magliano_Sabina" target="_blank" rel="noopener">Category:Magliano Sabina</a></li><li class="cat-tag"><a href="https://commons.wikimedia.org/wiki/Category:Category:Torri_in_Sabina" target="_blank" rel="noopener">Category:Torri in Sabina</a></li><li class="cat-tag"><a href="https://commons.wikimedia.org/wiki/Category:Category:Agriculture_in_Italy" target="_blank" rel="noopener">Category:Agriculture in Italy</a></li></ul></div></div>
                 
-                <div class="wikidata-block"><h4 class="block-title">Dati per Wikidata</h4><h5 class="block-subtitle">Statements</h5><table class="wd-statements"><thead><tr><th class="col-prop">Proprietà</th><th class="col-val">Valore</th><th class="col-stat">Stato</th></tr></thead><tbody><tr><td>P6216 — stato copyright</td><td>public domain <a href="https://www.wikidata.org/wiki/Q19652" target="_blank" rel="noopener" class="wd-qid">Q19652</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P275 — licenza</td><td>public domain <a href="https://www.wikidata.org/wiki/Q19652" target="_blank" rel="noopener" class="wd-qid">Q19652</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P571 — data di creazione</td><td>1918</td><td><span class="wd-status-ok">OK</span></td></tr></tbody></table><div class="wd-review"><strong class="review-label">Info:</strong> COMANDO DIVISIONE TERRITORIALE  /  DI ROMA  /  [manoscritto: 15] [illeggibile]  /  Tessera di riconoscimento  /  Si permette al [manoscritto: Sold. Vecchiarelli Ippolito] del [manoscritto: Distaccamento … [illeggibile] C.B. 13] di pernottare fuori Caserma, con l'obbligo di ritirarsi non più tardi delle ore [manoscritto: 22.30].  /  Si avverte che tale concessione verrà revocata, qualora si verifi-cassero inconvenienti, od il militare se ne rendesse immeritevole.  /  Roma, li [manoscritto: 19 Febbraio] 191[manoscritto: 8]  /  Firma dell'interessato [manoscritto: Ippolito Vecchiarelli]  /  IL CAPO DI STATO MAGGIORE [manoscritto: [illeggibile]]  /  [timbro: stemma circolare [illeggibile]]  /  TIP. G. PISTOLESI</div></div>
+                <div class="wikidata-block"><h4 class="block-title">Dati per Wikidata</h4><h5 class="block-subtitle">Statements</h5><table class="wd-statements"><thead><tr><th class="col-prop">Proprietà</th><th class="col-val">Valore</th><th class="col-stat">Stato</th></tr></thead><tbody><tr><td>P6216 — stato copyright</td><td>public domain <a href="https://www.wikidata.org/wiki/Q19652" target="_blank" rel="noopener" class="wd-qid">Q19652</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P275 — licenza</td><td>public domain <a href="https://www.wikidata.org/wiki/Q19652" target="_blank" rel="noopener" class="wd-qid">Q19652</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P571 — data di creazione</td><td>1952</td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P180 — raffigura</td><td>Rieti <a href="https://www.wikidata.org/wiki/Q13396" target="_blank" rel="noopener" class="wd-qid">Q13396</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P180 — raffigura</td><td>Magliano Sabina <a href="https://www.wikidata.org/wiki/Q224202" target="_blank" rel="noopener" class="wd-qid">Q224202</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P180 — raffigura</td><td>Torri in Sabina <a href="https://www.wikidata.org/wiki/Q224692" target="_blank" rel="noopener" class="wd-qid">Q224692</a></td><td><span class="wd-status-ok">OK</span></td></tr></tbody></table><div class="wd-review"><strong class="review-label">Info:</strong> MINISTERO DELL'AGRICOLTURA E DELLE FORESTE  /  ISPETTORATO PROVINCIALE DELL'AGRICOLTURA RIETI  /  La S. V. è invitata a partecipare alla «SETTIMANA DELLA TECNICA AGRICOLA» che avrà luogo, nelle ore pomeridiane, a MAGLIANO SABINA dal 18 al 23 Febbraio e a TORRI IN SABINA dal 25 Febbraio al 1° Marzo coll'intervento di illustri Docenti Universitari e Professori di Istituti Sperimentali.  /  Rieti, 14 Febbraio 1952.  /  IL CAPO DELL'ISPETTORATO  /  I. Vecchiarelli  /  Programma delle conferenze: 18-23 Febbraio 1952 (Prof. Mercuri Stanislao, Prof. Morani Valentino, Dott. Montico Piero, Ing. Fedele Francesco, Prof. Ceccucci Alberto, Dott. Meschi Giorgio); 25 Febbraio-1° Marzo 1952 (Prof. Frezzotti Giuseppe, Prof. Mercuri Stanislao, Dott. Montico Piero, Ing. Fedele Francesco, Dott. Scarapellini Mario, Ispettorato Agrario).  /  RETRO: [copertina] SETTIMANA DELLA TECNICA AGRARIA  /  MAGLIANO SABINA 18 - 23 FEBBRAIO 1952  /  TORRI IN SABINA 25 FEBBRAIO - 1 MARZO 1952  /  [illustrazione: spiga di frumento stilizzata]  /  F.LLI FARAONI - RIETI</div></div>
                 <div class="trail-block">
                   <details>
                     <summary>Dettagli della pipeline</summary>
@@ -1103,7 +1016,63 @@
 <dt>Data generazione:</dt>
 <dd>2026</dd>
 <dt>Politica di upload:</dt>
-<dd>tutto — l&#x27;utente sceglie di procedere comunque: tutti gli item sono marcato &#x27;Pronti&#x27; (anche incerti), ma le ragioni e i template restano onesti sui blocchi/limiti.</dd>
+<dd>solo copyright — un item è &#x27;Pronto&#x27; quando è in pubblico dominio con confidenza alta, anche con altri vincoli (l&#x27;alternativa &#x27;severo&#x27; richiede anche assenza di blocchi non-copyright).</dd>
+</dl>
+                    </div>
+                  </details>
+                </div>
+              </div>
+            </div>
+            
+            <div class="card filter-status-public_domain filter-upload-ready" id="item-Varie/2_fronte.JPG">
+              <div class="card-header">
+                <p class="filename">Varie/2_fronte.JPG</p>
+                <div class="badges">
+                  <span class="badge status-green">Pubblico Dominio</span> <span class="upload-badge upload-ready">ready</span>
+                </div>
+              </div>
+              <div class="thumbnails-container">
+                <a href="#light-Varie/2_fronte.JPG"><img src="./Varie/2_fronte.JPG" class="thumbnail" alt="Varie/2_fronte.JPG"></a><a href="#light-Varie/2_retro.JPG"><img src="./Varie/2_retro.JPG" class="thumbnail" alt="Varie/2_retro.JPG"></a>
+              </div>
+              <div class="card-body">
+                <div class="upload-reason-line"><strong>Motivo upload:</strong> In pubblico dominio (criterio solo copyright): candidato per l'import manuale.</div>
+                <div class="filename-planned"><strong>Nome previsto su Commons:</strong><br>  Fronte: Invito trentacinquennio Regio Istituto Agrario Perugia 1933.jpg<br>  Retro: Invito trentacinquennio Regio Istituto Agrario Perugia 1933.jpg<br><small>(da pubdom.json)</small></div>
+                <section class="issues-section">
+                  <h4 class="block-title">Problemi e Blocchi</h4>
+                   <ul class="issues-list">
+                     <li class="no-issues">Nessun problema rilevato</li>
+                   </ul>
+                </section>
+                <div class="what-to-do-block"><h4 class="block-title">Cosa fare adesso</h4><p class="no-action">Nessuna azione specifica richiesta</p></div>
+                <div class="date-determination"><h4 class="block-title">Determinazione della data</h4><p class="date-line">Evidenza: Perugia, 22 Maggio 1933 - XI; 28 Maggio 1933; (1896 - 1933)</p><p class="date-line">Anno di riferimento: 1933</p><p class="date-line">Fonte: Testo visibile</p></div>
+                <div class="transcription-block"><h4 class="block-title">Trascrizione</h4><details class="ocr-side" open><summary>Trascrizione visione</summary><pre class="transcription">R. ISTITUTO SUPERIORE AGRARIO di PERUGIA 
+ (1896 - 1933) 
+ [stemma sabaudo con corona] 
+ RETRO: LA S. V. ILL.MA È INVITATA AD INTERVENIRE ALLE CERIMONIE CHE SI SVOLGERANNO DOMENICA 28 MAGGIO NELL&#x27;AULA MAGNA DI QUESTO R. ISTITUTO SUPERIORE AGRARIO SECONDO L&#x27;ACCLUSO PROGRAMMA. 
+ Perugia, 22 Maggio 1933 - XI. 
+ IL DIRETTORE 
+ Prof. Carlo Fuschini 
+ PROGRAMMA: Raduno dei Laureati per il trentacinquennio dell&#x27;Istituto; inaugurazione di un ricordo in memoria del Fondatore On. Sen. Conte Dott. Eugenio Faina; consegna di una medaglia d&#x27;oro al Prof. Comm. Alessandro Vivenza; conferenze dell&#x27;On. Dott. Livio Gattani di Laurenzana e del Comm. Prof. Mario Ferraguti («L&#x27;autorizzazione a gasogeno»). 
+ Tip. Pliniana già Simoncelli - Perugia</pre></details></div>
+                <div class="meta-row">
+                  <span class="confidence">Confidenza: media</span>
+                </div>
+                
+                
+                <div class="two-col"><div class="licence-block"><h4 class="block-title">Licenze e Template</h4><ul class="licence-list"><li class="licence-tag"><a href="https://commons.wikimedia.org/wiki/Template:PD-Italy-EdictGov" target="_blank" rel="noopener">{{PD-Italy-EdictGov}}</a></li><li class="licence-tag source"><a href="https://commons.wikimedia.org/wiki/Template:Self-scanned" target="_blank" rel="noopener">{{Self-scanned}}</a></li></ul></div><div class="licence-block cats-block"><h4 class="block-title">Categorie</h4><ul class="licence-list"><li class="cat-tag"><a href="https://commons.wikimedia.org/wiki/Category:Category:University_of_Perugia" target="_blank" rel="noopener">Category:University of Perugia</a></li></ul></div></div>
+                
+                <div class="wikidata-block"><h4 class="block-title">Dati per Wikidata</h4><h5 class="block-subtitle">Statements</h5><table class="wd-statements"><thead><tr><th class="col-prop">Proprietà</th><th class="col-val">Valore</th><th class="col-stat">Stato</th></tr></thead><tbody><tr><td>P6216 — stato copyright</td><td>public domain <a href="https://www.wikidata.org/wiki/Q19652" target="_blank" rel="noopener" class="wd-qid">Q19652</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P275 — licenza</td><td>public domain <a href="https://www.wikidata.org/wiki/Q19652" target="_blank" rel="noopener" class="wd-qid">Q19652</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P571 — data di creazione</td><td>1933</td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P180 — raffigura</td><td>Perugia <a href="https://www.wikidata.org/wiki/Q3437" target="_blank" rel="noopener" class="wd-qid">Q3437</a></td><td><span class="wd-status-ok">OK</span></td></tr></tbody></table><div class="wd-review"><strong class="review-label">Info:</strong> R. ISTITUTO SUPERIORE AGRARIO di PERUGIA  /  (1896 - 1933)  /  [stemma sabaudo con corona]  /  RETRO: LA S. V. ILL.MA È INVITATA AD INTERVENIRE ALLE CERIMONIE CHE SI SVOLGERANNO DOMENICA 28 MAGGIO NELL'AULA MAGNA DI QUESTO R. ISTITUTO SUPERIORE AGRARIO SECONDO L'ACCLUSO PROGRAMMA.  /  Perugia, 22 Maggio 1933 - XI.  /  IL DIRETTORE  /  Prof. Carlo Fuschini  /  PROGRAMMA: Raduno dei Laureati per il trentacinquennio dell'Istituto; inaugurazione di un ricordo in memoria del Fondatore On. Sen. Conte Dott. Eugenio Faina; consegna di una medaglia d'oro al Prof. Comm. Alessandro Vivenza; conferenze dell'On. Dott. Livio Gattani di Laurenzana e del Comm. Prof. Mario Ferraguti («L'autorizzazione a gasogeno»).  /  Tip. Pliniana già Simoncelli - Perugia</div></div>
+                <div class="trail-block">
+                  <details>
+                    <summary>Dettagli della pipeline</summary>
+                    <div class="scrollable">
+                       <dl class="pipeline-details">
+<dt>Versione tabelle regole:</dt>
+<dd>multi@2026-02-URAA [IT L.633/1941+L.182/2025 | GB CDPA 1988 | VA L.CXCVII/2017 | URAA condition]</dd>
+<dt>Data generazione:</dt>
+<dd>2026</dd>
+<dt>Politica di upload:</dt>
+<dd>solo copyright — un item è &#x27;Pronto&#x27; quando è in pubblico dominio con confidenza alta, anche con altri vincoli (l&#x27;alternativa &#x27;severo&#x27; richiede anche assenza di blocchi non-copyright).</dd>
 </dl>
                     </div>
                   </details>
@@ -1119,11 +1088,11 @@
                 </div>
               </div>
               <div class="thumbnails-container">
-                <a href="#light-Varie/4_fronte.png"><img src="./Varie/4_fronte.png" class="thumbnail" alt="Varie/4_fronte.png"></a>
+                <a href="#light-Varie/4_fronte.png"><img src="./Varie/4_fronte.png" class="thumbnail" alt="Varie/4_fronte.png"></a><a href="#light-Varie/4_retro.png"><img src="./Varie/4_retro.png" class="thumbnail" alt="Varie/4_retro.png"></a>
               </div>
               <div class="card-body">
-                <div class="upload-reason-line"><strong>Motivo upload:</strong> Politica 'all': caricamento voluto dall'utente; rimangono i blocchi: non-copyright: Lettera privata: oltre al copyright vale il diritto di consenso dell'Art. 93 (o l'equivalente straniero) e la privacy degli eredi.; dati mancanti: Identificare mittente e destinatario., Verificare privacy e consenso degli eredi..</div>
-                <div class="filename-planned"><strong>Nome previsto su Commons:</strong> Lettera assegnazione palchi Teatro Flavio 1921.png (da pubdom.json)</div>
+                <div class="upload-reason-line"><strong>Motivo upload:</strong> In pubblico dominio (criterio solo copyright): candidato per l'import manuale.</div>
+                <div class="filename-planned"><strong>Nome previsto su Commons:</strong><br>  Fronte: Cartolina Amalfi Hôtel Cappuccini e viale.png<br>  Retro: Cartolina Amalfi Hôtel Cappuccini e viale (retro).png<br><small>(da pubdom.json)</small></div>
                 <section class="issues-section">
                   <h4 class="block-title">Problemi e Blocchi</h4>
                    <ul class="issues-list">
@@ -1131,32 +1100,20 @@
                    </ul>
                 </section>
                 <div class="what-to-do-block"><h4 class="block-title">Cosa fare adesso</h4><ul class="what-to-do-list"><li>Cartolina spedita a persona identificata: valuta il consenso dell'Art. 93 (destinatario/eredi)</li></ul></div>
-                <div class="date-determination"><h4 class="block-title">Determinazione della data</h4><p class="date-line">Evidenza: Li 26 ottobre 1921</p><p class="date-line">Anno di riferimento: 1921</p><p class="date-line">Fonte: Testo visibile</p></div>
-                <div class="transcription-block"><h4 class="block-title">Trascrizione</h4><details class="ocr-side" open><summary>Trascrizione visione</summary><pre class="transcription">MUNICIPIO DI RIETI 
- N° 8594 
- Li 26 ottobre 1921 
- OGGETTO= ASSEGNAZIONE DEI PALCHI DEL TEATRO FLAVIO 
- Facendo seguito alla mia lettera N° 8566 del 24 corr., Le partecipo che nell&#x27;odierna adunanza dei Signori Palchettisti del Teatro Flavio, si è proceduto al sorteggio dei palchi, ed alla S. V. sono stati assegnati i seguenti: 
- ....Primo... Ordine = Lato ....destro.... N° ...4.... 
- Terzo Ordine Lato ...................... N° ................ 
- Comunico inoltre che l&#x27;ammontare della scorta in L. 3000 è stata ripartita come appresso: 
- Per ciascun palco di 1° e 2° ordine L. 57, più L. 13 per il mobilio 
- &quot; &quot; &quot; &quot; 3° &quot; &quot; 27 &quot; &quot; &quot; &quot; &quot; &quot; 
- Con facoltà, s&#x27;intende, di cedere i palchi all&#x27;incanto, qualora non credano di corrispondere le quote come sopra fissate. 
- In mancanza di rinuncia scritta all&#x27;uso di essi (rinuncia che dovrà presentarsi a questo ufficio Contabilità entro il 28 corrente) s&#x27;intenderà senz&#x27;altro accettato il contributo di cui sopra, che dovrà essere corrisposto non oltre il 31 detto mese. 
- Con stima 
- IL R° COMMISSARIO 
- [firma manoscritta illeggibile] 
- Signor. Vecchiarelli [illegibile] 
- RIETI</pre></details></div>
+                <div class="date-determination"><h4 class="block-title">Determinazione della data</h4><p class="date-line">Nessun dato disponibile</p></div>
+                <div class="transcription-block"><h4 class="block-title">Trascrizione</h4><details class="ocr-side" open><summary>Trascrizione visione</summary><pre class="transcription">Amalfi - Hôtel Cappuccini e Viale 
+ [manoscritto soprascritto illeggibile] 
+ RETRO: CARTOLINA POSTALE ITALIANA 
+ (CARTE POSTALE D&#x27;ITALIE) 
+ [manoscritto: A]</pre></details></div>
                 <div class="meta-row">
                   <span class="confidence">Confidenza: media</span>
                 </div>
                 
                 
-                <div class="two-col"><div class="licence-block"><h4 class="block-title">Licenze e Template</h4><ul class="licence-list"><li class="licence-tag"><a href="https://commons.wikimedia.org/wiki/Template:PD-Italy-EdictGov" target="_blank" rel="noopener">{{PD-Italy-EdictGov}}</a></li><li class="licence-tag source"><a href="https://commons.wikimedia.org/wiki/Template:Self-scanned" target="_blank" rel="noopener">{{Self-scanned}}</a></li></ul></div><div class="licence-block cats-block"><h4 class="block-title">Categorie</h4><ul class="licence-list"><li class="cat-tag"><a href="https://commons.wikimedia.org/wiki/Category:Category:Rieti" target="_blank" rel="noopener">Category:Rieti</a></li><li class="cat-tag"><a href="https://commons.wikimedia.org/wiki/Category:Category:Teatro_Flavio_Vespasiano" target="_blank" rel="noopener">Category:Teatro Flavio Vespasiano</a></li></ul></div></div>
+                <div class="two-col"><div class="licence-block"><h4 class="block-title">Licenze e Template</h4><ul class="licence-list"><li class="licence-tag"><a href="https://commons.wikimedia.org/wiki/Template:PD-Italy" target="_blank" rel="noopener">{{PD-Italy}}</a></li><li class="licence-tag source"><a href="https://commons.wikimedia.org/wiki/Template:Self-scanned" target="_blank" rel="noopener">{{Self-scanned}}</a></li></ul></div><div class="licence-block cats-block"><h4 class="block-title">Categorie</h4><ul class="licence-list"><li class="cat-tag"><a href="https://commons.wikimedia.org/wiki/Category:Category:Postcards_of_Amalfi" target="_blank" rel="noopener">Category:Postcards of Amalfi</a></li><li class="cat-tag"><a href="https://commons.wikimedia.org/wiki/Category:Category:Postcards_of_Italy" target="_blank" rel="noopener">Category:Postcards of Italy</a></li></ul></div></div>
                 
-                <div class="wikidata-block"><h4 class="block-title">Dati per Wikidata</h4><h5 class="block-subtitle">Statements</h5><table class="wd-statements"><thead><tr><th class="col-prop">Proprietà</th><th class="col-val">Valore</th><th class="col-stat">Stato</th></tr></thead><tbody><tr><td>P6216 — stato copyright</td><td>public domain <a href="https://www.wikidata.org/wiki/Q19652" target="_blank" rel="noopener" class="wd-qid">Q19652</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P275 — licenza</td><td>public domain <a href="https://www.wikidata.org/wiki/Q19652" target="_blank" rel="noopener" class="wd-qid">Q19652</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P571 — data di creazione</td><td>1921</td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P170 — autore</td><td>MUNICIPIO DI RIETI <a href="https://www.wikidata.org/wiki/Q134679322" target="_blank" rel="noopener" class="wd-qid">Q134679322</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P180 — raffigura</td><td>Rieti <a href="https://www.wikidata.org/wiki/Q13396" target="_blank" rel="noopener" class="wd-qid">Q13396</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P180 — raffigura</td><td>Municipio di Rieti <a href="https://www.wikidata.org/wiki/Q134679322" target="_blank" rel="noopener" class="wd-qid">Q134679322</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P180 — raffigura</td><td>Teatro Flavio <a href="https://www.wikidata.org/wiki/Q3981982" target="_blank" rel="noopener" class="wd-qid">Q3981982</a></td><td><span class="wd-status-ok">OK</span></td></tr></tbody></table><div class="wd-review"><strong class="review-label">Info:</strong> MUNICIPIO DI RIETI  /  N° 8594  /  Li 26 ottobre 1921  /  OGGETTO= ASSEGNAZIONE DEI PALCHI DEL TEATRO FLAVIO  /  Facendo seguito alla mia lettera N° 8566 del 24 corr., Le partecipo che nell'odierna adunanza dei Signori Palchettisti del Teatro Flavio, si è proceduto al sorteggio dei palchi, ed alla S. V. sono stati assegnati i seguenti:  /  ....Primo... Ordine = Lato ....destro.... N° ...4....  /  Terzo Ordine Lato ...................... N° ................  /  Comunico inoltre che l'ammontare della scorta in L. 3000 è stata ripartita come appresso:  /  Per ciascun palco di 1° e 2° ordine L. 57, più L. 13 per il mobilio  /  " " " " 3° " " 27 " " " " " "  /  Con facoltà, s'intende, di cedere i palchi all'incanto, qualora non credano di corrispondere le quote come sopra fissate.  /  In mancanza di rinuncia scritta all'uso di essi (rinuncia che dovrà presentarsi a questo ufficio Contabilità entro il 28 corrente) s'intenderà senz'altro accettato il contributo di cui sopra, che dovrà essere corrisposto non oltre il 31 detto mese.  /  Con stima  /  IL R° COMMISSARIO  /  [firma manoscritta illeggibile]  /  Signor. Vecchiarelli [illegibile]  /  RIETI</div></div>
+                <div class="wikidata-block"><h4 class="block-title">Dati per Wikidata</h4><h5 class="block-subtitle">Statements</h5><table class="wd-statements"><thead><tr><th class="col-prop">Proprietà</th><th class="col-val">Valore</th><th class="col-stat">Stato</th></tr></thead><tbody><tr><td>P31 — istanza di</td><td>postcard <a href="https://www.wikidata.org/wiki/Q192425" target="_blank" rel="noopener" class="wd-qid">Q192425</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P6216 — stato copyright</td><td>public domain <a href="https://www.wikidata.org/wiki/Q19652" target="_blank" rel="noopener" class="wd-qid">Q19652</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P275 — licenza</td><td>public domain <a href="https://www.wikidata.org/wiki/Q19652" target="_blank" rel="noopener" class="wd-qid">Q19652</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P571 — data di creazione</td><td>None</td><td><span class="wd-status-review">Rivedere</span></td></tr><tr><td>P180 — raffigura</td><td>Amalfi <a href="https://www.wikidata.org/wiki/Q1441668" target="_blank" rel="noopener" class="wd-qid">Q1441668</a></td><td><span class="wd-status-ok">OK</span></td></tr></tbody></table><div class="wd-review"><strong class="review-label">Info:</strong> Amalfi - Hôtel Cappuccini e Viale  /  [manoscritto soprascritto illeggibile]  /  RETRO: CARTOLINA POSTALE ITALIANA  /  (CARTE POSTALE D'ITALIE)  /  [manoscritto: A]</div></div>
                 <div class="trail-block">
                   <details>
                     <summary>Dettagli della pipeline</summary>
@@ -1167,64 +1124,7 @@
 <dt>Data generazione:</dt>
 <dd>2023-11-28</dd>
 <dt>Politica di upload:</dt>
-<dd>tutto — l&#x27;utente sceglie di procedere comunque: tutti gli item sono marcato &#x27;Pronti&#x27; (anche incerti), ma le ragioni e i template restano onesti sui blocchi/limiti.</dd>
-</dl>
-                    </div>
-                  </details>
-                </div>
-              </div>
-            </div>
-            
-            <div class="card filter-status-public_domain filter-upload-ready" id="item-Varie/6.png">
-              <div class="card-header">
-                <p class="filename">Varie/6.png</p>
-                <div class="badges">
-                  <span class="badge status-green">Pubblico Dominio</span> <span class="upload-badge upload-ready">ready</span>
-                </div>
-              </div>
-              <div class="thumbnails-container">
-                <a href="#light-Varie/6.png"><img src="./Varie/6.png" class="thumbnail" alt="Varie/6.png"></a>
-              </div>
-              <div class="card-body">
-                <div class="upload-reason-line"><strong>Motivo upload:</strong> Politica 'all': caricamento voluto dall'utente; rimangono i blocchi: non-copyright: Lettera privata: oltre al copyright vale il diritto di consenso dell'Art. 93 (o l'equivalente straniero) e la privacy degli eredi.; dati mancanti: Identificare mittente e destinatario., Verificare privacy e consenso degli eredi..</div>
-                <div class="filename-planned"><strong>Nome previsto su Commons:</strong> Invito Quirinale celebrazioni Mazzini 1949.png (da pubdom.json)</div>
-                <section class="issues-section">
-                  <h4 class="block-title">Problemi e Blocchi</h4>
-                   <ul class="issues-list">
-                     <li class="no-issues">Nessun problema rilevato</li>
-                   </ul>
-                </section>
-                <div class="what-to-do-block"><h4 class="block-title">Cosa fare adesso</h4><ul class="what-to-do-list"><li>Cartolina spedita a persona identificata: valuta il consenso dell'Art. 93 (destinatario/eredi)</li></ul></div>
-                <div class="date-determination"><h4 class="block-title">Determinazione della data</h4><p class="date-line">Evidenza: 2 GIUGNO 1949</p><p class="date-line">Anno di riferimento: 1949</p><p class="date-line">Fonte: Testo visibile</p></div>
-                <div class="transcription-block"><h4 class="block-title">Trascrizione</h4><details class="ocr-side" open><summary>Trascrizione visione</summary><pre class="transcription">IL PRESENTE INVITO È STRETTAMENTE PERSONALE 
- [stemma] 
- PRESIDENZA DELLA REPUBBLICA 
- IL SEGRETARIO GENERALE, PER INCARICO DEL PRESIDENTE 
- DELLA REPUBBLICA, SI ONORA INVITARE IL SINDACO DEL COMUNE DI [manoscritto: Greccio] 
- AL RICEVIMENTO CHE AVRÀ LUOGO NEI GIARDINI DEL PALAZZO DEL QUIRINALE 
- NEL POMERIGGIO DEL 2 GIUGNO 1949 IN OCCASIONE DELLE CELEBRAZIONI NAZIO- 
- NALI IN ONORE DI GIUSEPPE MAZZINI. 
- INGRESSO DA PIAZZA DEL QUIRINALE 
- DALLE ORE 17,30 ALLE ORE 18,00</pre></details></div>
-                <div class="meta-row">
-                  <span class="confidence">Confidenza: media</span>
-                </div>
-                
-                
-                <div class="two-col"><div class="licence-block"><h4 class="block-title">Licenze e Template</h4><ul class="licence-list"><li class="licence-tag"><a href="https://commons.wikimedia.org/wiki/Template:PD-Italy-EdictGov" target="_blank" rel="noopener">{{PD-Italy-EdictGov}}</a></li><li class="licence-tag source"><a href="https://commons.wikimedia.org/wiki/Template:Self-scanned" target="_blank" rel="noopener">{{Self-scanned}}</a></li></ul></div><div class="licence-block cats-block"><h4 class="block-title">Categorie</h4><ul class="licence-list"><li class="cat-tag"><a href="https://commons.wikimedia.org/wiki/Category:Category:Quirinal_Palace" target="_blank" rel="noopener">Category:Quirinal Palace</a></li><li class="cat-tag"><a href="https://commons.wikimedia.org/wiki/Category:Category:Quirinal_Palace_-_Gardens" target="_blank" rel="noopener">Category:Quirinal Palace - Gardens</a></li></ul></div></div>
-                
-                <div class="wikidata-block"><h4 class="block-title">Dati per Wikidata</h4><h5 class="block-subtitle">Statements</h5><table class="wd-statements"><thead><tr><th class="col-prop">Proprietà</th><th class="col-val">Valore</th><th class="col-stat">Stato</th></tr></thead><tbody><tr><td>P6216 — stato copyright</td><td>public domain <a href="https://www.wikidata.org/wiki/Q19652" target="_blank" rel="noopener" class="wd-qid">Q19652</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P275 — licenza</td><td>public domain <a href="https://www.wikidata.org/wiki/Q19652" target="_blank" rel="noopener" class="wd-qid">Q19652</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P571 — data di creazione</td><td>1949</td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P170 — autore</td><td>Presidenza della Repubblica <a href="https://www.wikidata.org/wiki/Q15191779" target="_blank" rel="noopener" class="wd-qid">Q15191779</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P180 — raffigura</td><td>Giuseppe Mazzini <a href="https://www.wikidata.org/wiki/Q187336" target="_blank" rel="noopener" class="wd-qid">Q187336</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P180 — raffigura</td><td>Greccio <a href="https://www.wikidata.org/wiki/Q224144" target="_blank" rel="noopener" class="wd-qid">Q224144</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P180 — raffigura</td><td>Palazzo del Quirinale <a href="https://www.wikidata.org/wiki/Q223079" target="_blank" rel="noopener" class="wd-qid">Q223079</a></td><td><span class="wd-status-ok">OK</span></td></tr><tr><td>P180 — raffigura</td><td>Presidenza della Repubblica <a href="https://www.wikidata.org/wiki/Q15191779" target="_blank" rel="noopener" class="wd-qid">Q15191779</a></td><td><span class="wd-status-ok">OK</span></td></tr></tbody></table><div class="wd-review"><strong class="review-label">Info:</strong> IL PRESENTE INVITO È STRETTAMENTE PERSONALE  /  [stemma]  /  PRESIDENZA DELLA REPUBBLICA  /  IL SEGRETARIO GENERALE, PER INCARICO DEL PRESIDENTE  /  DELLA REPUBBLICA, SI ONORA INVITARE IL SINDACO DEL COMUNE DI [manoscritto: Greccio]  /  AL RICEVIMENTO CHE AVRÀ LUOGO NEI GIARDINI DEL PALAZZO DEL QUIRINALE  /  NEL POMERIGGIO DEL 2 GIUGNO 1949 IN OCCASIONE DELLE CELEBRAZIONI NAZIO-  /  NALI IN ONORE DI GIUSEPPE MAZZINI.  /  INGRESSO DA PIAZZA DEL QUIRINALE  /  DALLE ORE 17,30 ALLE ORE 18,00</div></div>
-                <div class="trail-block">
-                  <details>
-                    <summary>Dettagli della pipeline</summary>
-                    <div class="scrollable">
-                       <dl class="pipeline-details">
-<dt>Versione tabelle regole:</dt>
-<dd>multi@2026-02-URAA [IT L.633/1941+L.182/2025 | GB CDPA 1988 | VA L.CXCVII/2017 | URAA condition]</dd>
-<dt>Data generazione:</dt>
-<dd>2023-11-28</dd>
-<dt>Politica di upload:</dt>
-<dd>tutto — l&#x27;utente sceglie di procedere comunque: tutti gli item sono marcato &#x27;Pronti&#x27; (anche incerti), ma le ragioni e i template restano onesti sui blocchi/limiti.</dd>
+<dd>solo copyright — un item è &#x27;Pronto&#x27; quando è in pubblico dominio con confidenza alta, anche con altri vincoli (l&#x27;alternativa &#x27;severo&#x27; richiede anche assenza di blocchi non-copyright).</dd>
 </dl>
                     </div>
                   </details>
@@ -1235,68 +1135,104 @@
         </div>
       </div>
       
-                <div class="lightbox-overlay" id="light-Varie/1_fronte_1924.png">
-                  <div class="lightbox-content">
-                    <a href="#main" class="lightbox-close">Chiudi ×</a>
-                    <img src="./Varie/1_fronte_1924.png" alt="Varie/1_fronte_1924.png">
-                  </div>
-                </div>
-                 
-                <div class="lightbox-overlay" id="light-Varie/1_retro_1924.png">
-                  <div class="lightbox-content">
-                    <a href="#main" class="lightbox-close">Chiudi ×</a>
-                    <img src="./Varie/1_retro_1924.png" alt="Varie/1_retro_1924.png">
-                  </div>
-                </div>
-                 
-                <div class="lightbox-overlay" id="light-Varie/2_fronte.png">
-                  <div class="lightbox-content">
-                    <a href="#main" class="lightbox-close">Chiudi ×</a>
-                    <img src="./Varie/2_fronte.png" alt="Varie/2_fronte.png">
-                  </div>
-                </div>
-                 
-                <div class="lightbox-overlay" id="light-Varie/2_retro.png">
-                  <div class="lightbox-content">
-                    <a href="#main" class="lightbox-close">Chiudi ×</a>
-                    <img src="./Varie/2_retro.png" alt="Varie/2_retro.png">
-                  </div>
-                </div>
-                 
                 <div class="lightbox-overlay" id="light-Varie/3_fronte.png">
                   <div class="lightbox-content">
-                    <a href="#main" class="lightbox-close">Chiudi ×</a>
+                    <a href="#" class="lightbox-close" onclick="closeLightbox(event)">Chiudi ×</a>
                     <img src="./Varie/3_fronte.png" alt="Varie/3_fronte.png">
+                  </div>
+                </div>
+                 
+                <div class="lightbox-overlay" id="light-Varie/3_retro.png">
+                  <div class="lightbox-content">
+                    <a href="#" class="lightbox-close" onclick="closeLightbox(event)">Chiudi ×</a>
+                    <img src="./Varie/3_retro.png" alt="Varie/3_retro.png">
+                  </div>
+                </div>
+                 
+                <div class="lightbox-overlay" id="light-Varie/1_fronte.jpg">
+                  <div class="lightbox-content">
+                    <a href="#" class="lightbox-close" onclick="closeLightbox(event)">Chiudi ×</a>
+                    <img src="./Varie/1_fronte.jpg" alt="Varie/1_fronte.jpg">
+                  </div>
+                </div>
+                 
+                <div class="lightbox-overlay" id="light-Varie/1_retro.jpg">
+                  <div class="lightbox-content">
+                    <a href="#" class="lightbox-close" onclick="closeLightbox(event)">Chiudi ×</a>
+                    <img src="./Varie/1_retro.jpg" alt="Varie/1_retro.jpg">
+                  </div>
+                </div>
+                 
+                <div class="lightbox-overlay" id="light-Varie/2_fronte.JPG">
+                  <div class="lightbox-content">
+                    <a href="#" class="lightbox-close" onclick="closeLightbox(event)">Chiudi ×</a>
+                    <img src="./Varie/2_fronte.JPG" alt="Varie/2_fronte.JPG">
+                  </div>
+                </div>
+                 
+                <div class="lightbox-overlay" id="light-Varie/2_retro.JPG">
+                  <div class="lightbox-content">
+                    <a href="#" class="lightbox-close" onclick="closeLightbox(event)">Chiudi ×</a>
+                    <img src="./Varie/2_retro.JPG" alt="Varie/2_retro.JPG">
                   </div>
                 </div>
                  
                 <div class="lightbox-overlay" id="light-Varie/4_fronte.png">
                   <div class="lightbox-content">
-                    <a href="#main" class="lightbox-close">Chiudi ×</a>
+                    <a href="#" class="lightbox-close" onclick="closeLightbox(event)">Chiudi ×</a>
                     <img src="./Varie/4_fronte.png" alt="Varie/4_fronte.png">
                   </div>
                 </div>
                  
-                <div class="lightbox-overlay" id="light-Varie/6.png">
+                <div class="lightbox-overlay" id="light-Varie/4_retro.png">
                   <div class="lightbox-content">
-                    <a href="#main" class="lightbox-close">Chiudi ×</a>
-                    <img src="./Varie/6.png" alt="Varie/6.png">
+                    <a href="#" class="lightbox-close" onclick="closeLightbox(event)">Chiudi ×</a>
+                    <img src="./Varie/4_retro.png" alt="Varie/4_retro.png">
                   </div>
                 </div>
                  
       <footer class="dashboard-footer">
         <p class="meta-subdued">Versione tabelle regole: multi@2026-02-URAA [IT L.633/1941+L.182/2025 | GB CDPA 1988 | VA L.CXCVII/2017 | URAA condition]</p>
-        <p class="meta-subdued">Data generazione: 2026-11-27 11:49:47</p>
+        <p class="meta-subdued">Data generazione: 2026-11-27 13:29:43</p>
         <p class="meta-subdued">Codice e metadati: CC0 1.0 Universal</p>
         
       </footer>
       <a href="#main" class="back-to-top">Torna su ↑</a>
       <script>
-        document.addEventListener('keydown', function (event) {
-          if (event.key === 'Escape' && document.querySelector('.lightbox-overlay:target')) {
-            window.location.hash = '';
+        var savedScrollY = 0;
+        function syncLightboxes() {
+          var h = location.hash || '';
+          document.querySelectorAll('.lightbox-overlay.open').forEach(function (el) {
+            if ('#' + el.id !== h) { el.classList.remove('open'); }
+          });
+          if (h.indexOf('#light-') === 0) {
+            var el = document.getElementById(h.slice(1));
+            if (el && !el.classList.contains('open')) {
+              savedScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+              el.classList.add('open');
+            }
           }
+        }
+        function closeLightbox(ev) {
+          if (ev) { ev.preventDefault(); }
+          document.querySelectorAll('.lightbox-overlay.open').forEach(function (el) {
+            el.classList.remove('open');
+          });
+          try { history.replaceState(null, '', location.pathname + location.search); }
+          catch (e) { window.location.hash = ''; }
+          window.scrollTo(0, savedScrollY);
+        }
+        window.addEventListener('hashchange', syncLightboxes);
+        document.addEventListener('keydown', function (event) {
+          if (event.key === 'Escape') { closeLightbox(); }
         });
+        document.addEventListener('click', function (event) {
+          var t = event.target;
+          if (!t || !t.classList) { return; }
+          if (t.closest && t.closest('.lightbox-close')) { closeLightbox(event); return; }
+          if (t.classList.contains('lightbox-overlay')) { closeLightbox(event); }
+        });
+        syncLightboxes();
       </script>
     </body>
     </html>

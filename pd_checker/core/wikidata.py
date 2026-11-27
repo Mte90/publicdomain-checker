@@ -323,12 +323,16 @@ def _build_statements(verdict: dict, ctx: dict) -> list[dict]:
     
     if text_to_search:
         # Load cache and look for known entity names in the visible text
+        # Per-item suppression: mentions on the address/message side are not
+        # subjects — facts `depicts_exclude` lists names the text-match must
+        # never promote to represents (e.g. the recipient's city).
+        excluded = {n.lower() for n in (extracted.get("depicts_exclude") or [])}
         try:
             from .catalogs import _load_wd_cache
             cache = _load_wd_cache()
             cache_names = [
                 name for name in cache.get("names", {}).keys()
-                if name.lower() not in _P180_STOPWORDS
+                if name.lower() not in _P180_STOPWORDS and name.lower() not in excluded
             ]
             
             # First pass: build QID → canonical name mapping from visible_text matches
